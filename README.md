@@ -43,6 +43,9 @@ Project Lead/Developer: Joem Manuel Balaguer
 
 Researchers:
 John Lynyrd Godinez
+
 Daryl Michael Magat
+
 Fiona Tocyapao
+
 Roanmark Ignacio
