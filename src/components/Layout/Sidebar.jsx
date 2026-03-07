@@ -1,12 +1,26 @@
 import React from 'react';
-import { LayoutDashboard, FlaskConical, Library, Beaker, Atom } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, FlaskConical, Library, Beaker, Atom, LogOut } from 'lucide-react';
+import { useAuth } from '../../backend/Firebase/AuthContext';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
+
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', active: true, href: '#' },
-    { icon: FlaskConical, label: 'Experiments', active: false, href: '#' },
-    { icon: Library, label: 'Library', active: false, href: '#' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { icon: FlaskConical, label: 'Experiments', path: '/experiments' },
+    { icon: Library, label: 'Library', path: '/library' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <aside className="w-64 bg-white shadow-lg flex flex-col">
@@ -21,12 +35,12 @@ const Sidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 px-4">
         {menuItems.map((item, index) => (
-          <a
+          <NavLink
             key={index}
-            href={item.href}
-            className={`
+            to={item.path}
+            className={({ isActive }) => `
               flex items-center px-4 py-3 mb-2 rounded-lg transition-colors
-              ${item.active 
+              ${isActive 
                 ? 'bg-blue-50 text-blue-600' 
                 : 'text-gray-600 hover:bg-gray-50'
               }
@@ -34,35 +48,34 @@ const Sidebar = () => {
           >
             <item.icon size={20} />
             <span className="ml-3 font-medium">{item.label}</span>
-          </a>
+          </NavLink>
         ))}
       </nav>
 
       {/* User Profile */}
       <div className="p-4 border-t border-gray-100">
-        <div className="flex items-center">
+        <div className="flex items-center mb-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-            LB
+            {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-gray-700">Lebron James</p>
-            <p className="text-xs text-gray-500">THE GOAT</p>
+            <p className="text-sm font-medium text-gray-700">
+              {currentUser?.email?.split('@')[0] || 'User'}
+            </p>
+            <p className="text-xs text-gray-500">Student</p>
           </div>
         </div>
+        
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+        >
+          <LogOut size={16} className="mr-2" />
+          Sign Out
+        </button>
       </div>
 
-      {/* Quick Tools */}
-      <div className="p-4 border-t border-gray-100">
-        <div className="bg-purple-50 rounded-lg p-3">
-          <div className="flex items-center text-purple-700 mb-2">
-            <Atom size={16} className="mr-2" />
-            <span className="text-sm font-medium">Quick Tools</span>
-          </div>
-          <button className="text-xs text-purple-600 hover:text-purple-700">
-            Periodic Table →
-          </button>
-        </div>
-      </div>
     </aside>
   );
 };
