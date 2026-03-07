@@ -1,7 +1,7 @@
-Lab Buddy
+# Lab Buddy
 A virtual chemistry laboratory for interactive and immersive science learning. Built with React, Firebase, and Tailwind CSS.
 
-Features
+## Features
 🔐 Firebase Authentication - Secure login and registration
 
 🧪 Interactive Experiments - Virtual lab simulations
@@ -14,7 +14,7 @@ Features
 
 📊 User Dashboard - Track progress and recent activity
 
-Tech Stack
+## Tech Stack
 Frontend: React 18, React Router 6, Tailwind CSS
 
 Icons: Lucide React
@@ -23,7 +23,7 @@ Backend & Auth: Firebase 10 (Authentication, Firestore, Hosting)
 
 Build Tool: Vite 4
 
-Getting Started
+## Getting Started
 Prerequisites
 Node.js 18+
 
