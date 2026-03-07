@@ -1,16 +1,48 @@
-# React + Vite
+# Lab Buddy
+A virtual chemistry laboratory for interactive and immersive science learning. Built with React, Firebase, and Tailwind CSS.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## ✨Features
+🔐 Firebase Authentication - Secure login and registration
 
-Currently, two official plugins are available:
+🧪 Interactive Experiments - Virtual lab simulations
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+📚 Experiment Library - Browse and search experiments
 
-## React Compiler
+⚛️ Periodic Table - Interactive element explorer
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+🛡️ Safety Guide - Lab safety protocols
 
-## Expanding the ESLint configuration
+📊 User Dashboard - Track progress and recent activity
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ Tech Stack
+Frontend
+React 18 - UI library with hooks and functional components
+
+React Router 6 - Client-side routing and navigation
+
+Tailwind CSS - Utility-first CSS framework for styling
+
+Lucide React - Beautiful, consistent icon set
+
+Backend & Services
+Firebase Authentication - Secure user management
+
+Firestore Database - NoSQL database for user data and experiments
+
+Firebase Hosting - Fast, secure hosting with CDN
+
+Development Tools
+Vite - Next-generation build tool and dev server
+
+ESLint - Code linting and quality
+
+Git - Version control
+
+## 👥 Team
+Project Lead/Developer: Joem Manuel Balaguer
+
+Researchers:
+John Lynyrd Godinez
+Daryl Michael Magat
+Fiona Tocyapao
+Roanmark Ignacio
