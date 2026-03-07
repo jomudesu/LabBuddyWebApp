@@ -15,7 +15,7 @@ A virtual chemistry laboratory for interactive and immersive science learning. B
 📊 User Dashboard - Track progress and recent activity
 
 ## 🛠️ Tech Stack
-Frontend
+Frontend:
 React 18 - UI library with hooks and functional components
 
 React Router 6 - Client-side routing and navigation
@@ -24,14 +24,14 @@ Tailwind CSS - Utility-first CSS framework for styling
 
 Lucide React - Beautiful, consistent icon set
 
-Backend & Services
+Backend & Services:
 Firebase Authentication - Secure user management
 
 Firestore Database - NoSQL database for user data and experiments
 
 Firebase Hosting - Fast, secure hosting with CDN
 
-Development Tools
+Development Tools:
 Vite - Next-generation build tool and dev server
 
 ESLint - Code linting and quality
