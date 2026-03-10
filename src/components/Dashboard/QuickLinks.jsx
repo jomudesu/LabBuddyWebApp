@@ -16,7 +16,7 @@ const QuickLinks = () => {
         {links.map((link, index) => (
           <button
             key={index}
-            className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition group"
+            className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-200 transition group"
           >
             <div className="flex items-center">
               <div className={`${link.bg} p-2 rounded-lg`}>

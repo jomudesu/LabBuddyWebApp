@@ -42,7 +42,7 @@ const Sidebar = () => {
               flex items-center px-4 py-3 mb-2 rounded-lg transition-colors
               ${isActive 
                 ? 'bg-blue-50 text-blue-600' 
-                : 'text-gray-600 hover:bg-gray-50'
+                : 'text-gray-600 hover:bg-gray-200'
               }
             `}
           >
