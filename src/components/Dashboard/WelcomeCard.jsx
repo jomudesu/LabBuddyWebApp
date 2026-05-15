@@ -1,8 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { useAuth } from '../../backend/Firebase/AuthContext';
 
 const WelcomeCard = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   
   // Get display name from Firebase user
@@ -29,7 +31,10 @@ const WelcomeCard = () => {
         </div>
 
         {/* Right side - Button */}
-        <button className="bg-white text-blue-700 px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-100 transition-all shadow-lg hover:shadow-xl whitespace-nowrap">
+        <button 
+          onClick={() => navigate('/experiments')}
+          className="bg-white text-blue-700 px-6 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-100 transition-all shadow-lg hover:shadow-xl whitespace-nowrap"
+        >
           <Play size={18} />
           Let's Begin
         </button>

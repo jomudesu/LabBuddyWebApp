@@ -4,9 +4,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile // Add this import
+  updateProfile
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from './firebase';
 
 const AuthContext = createContext();
 
@@ -19,19 +20,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Register function with display name
+  // Register function with display name and Firestore user document
   const register = async (email, password, displayName) => {
     try {
       setError(null);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
       
       // Update profile with display name
-      await updateProfile(userCredential.user, {
+      await updateProfile(user, {
         displayName: displayName
       });
       
-      // Refresh the user to get updated profile
-      setCurrentUser({ ...userCredential.user, displayName });
+      // Create user document in Firestore with role
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: displayName,
+        role: 'student',  // default role
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+      });
+      
+      // Refresh the user state
+      setCurrentUser({ ...user, displayName });
       
       return userCredential;
     } catch (err) {
@@ -40,11 +52,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login function
+  // Login function – update lastLogin timestamp
   const login = async (email, password) => {
     try {
       setError(null);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Update lastLogin in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        lastLogin: serverTimestamp()
+      }, { merge: true });
+      
       return userCredential;
     } catch (err) {
       setError(err.message);
