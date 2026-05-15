@@ -1,65 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   PlayCircle, 
   HelpCircle, 
   Atom, 
   ChevronRight, 
-  Calendar,
   Beaker,
-  BookOpen,
-  FileText,
   AlertCircle,
-  CheckCircle,
-  Clock,
-  X
 } from 'lucide-react';
 import Modal from '../Common/Modal';
+import { useExperiments } from '../../backend/Firebase/useExperiments';
 
 const QuickLinks = () => {
   const navigate = useNavigate();
   const [activeModal, setActiveModal] = useState(null);
+  const [randomExperiments, setRandomExperiments] = useState([]);
+  const { experiments, loading } = useExperiments();
 
-  // Modal configurations
+  // When modal opens, pick 3 random experiments
+  useEffect(() => {
+    if (activeModal === 'beginExperiment' && experiments.length > 0 && !loading) {
+      const shuffled = [...experiments];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      setRandomExperiments(shuffled.slice(0, 3));
+    }
+  }, [activeModal, experiments, loading]);
+
+  // Helper to get color class based on difficulty
+  const getDifficultyColor = (difficulty) => {
+    switch(difficulty) {
+      case 'Beginner': return 'green';
+      case 'Intermediate': return 'blue';
+      case 'Advanced': return 'purple';
+      default: return 'gray';
+    }
+  };
+
   const modals = {
     beginExperiment: {
-      title: 'Start an Experiment',
+      title: 'Try These Experiments',
       content: (
         <div className="space-y-4">
-          <p className="text-gray-600">Choose an experiment to begin your lab session:</p>
-          <div className="space-y-2">
-            {[
-              { name: 'Acid-Base Titration', difficulty: 'Intermediate', duration: '30 min', color: 'blue', description: 'Learn about pH indicators and neutralization reactions' },
-              { name: 'Paper Chromatography', difficulty: 'Beginner', duration: '20 min', color: 'green', description: 'Separate mixtures using filter paper' },
-              { name: 'Electrolysis of Water', difficulty: 'Advanced', duration: '45 min', color: 'purple', description: 'Split water into hydrogen and oxygen' },
-              { name: 'pH Scale Measurement', difficulty: 'Beginner', duration: '15 min', color: 'orange', description: 'Test acidity and basicity of solutions' }
-            ].map((exp, idx) => (
-              <div 
-                key={idx}
-                onClick={() => {
-                  setActiveModal(null);
-                  navigate('/experiments');
-                }}
-                className="flex items-start p-3 border rounded-xl hover:shadow-md transition cursor-pointer group"
-              >
-                <div className={`w-10 h-10 bg-${exp.color}-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0`}>
-                  <Beaker size={20} className={`text-${exp.color}-600`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <p className="font-semibold text-gray-800 group-hover:text-blue-600">{exp.name}</p>
-                    <div className="flex gap-2 text-xs text-gray-500">
-                      <span>{exp.difficulty}</span>
-                      <span>•</span>
-                      <span>{exp.duration}</span>
+          <p className="text-gray-600">Here are 3 experiments we recommend for you today:</p>
+          {loading ? (
+            <div className="text-center py-4">Loading Experiments...</div>
+          ) : randomExperiments.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">No experiments available.</div>
+          ) : (
+            <div className="space-y-3">
+              {randomExperiments.map((exp) => {
+                const color = getDifficultyColor(exp.difficulty);
+                return (
+                  <div 
+                    key={exp.id}
+                    onClick={() => {
+                      setActiveModal(null);
+                      navigate('/experiments');
+                    }}
+                    className="flex items-start p-3 border rounded-xl hover:shadow-md transition cursor-pointer group"
+                  >
+                    <div className={`w-10 h-10 bg-${color}-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0`}>
+                      <Beaker size={20} className={`text-${color}-600`} />
                     </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <p className="font-semibold text-gray-800 group-hover:text-blue-600">{exp.title}</p>
+                        <div className="flex gap-2 text-xs text-gray-500">
+                          <span>{exp.difficulty}</span>
+                          <span>•</span>
+                          <span>{exp.duration} min</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{exp.description}</p>
+                    </div>
+                    <ChevronRight size={16} className="text-gray-400 ml-2 flex-shrink-0" />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{exp.description}</p>
-                </div>
-                <ChevronRight size={16} className="text-gray-400 ml-2 flex-shrink-0" />
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
           <button 
             onClick={() => {
               setActiveModal(null);
@@ -97,7 +119,6 @@ const QuickLinks = () => {
               </div>
             ))}
           </div>
-          
           <div className="bg-blue-50 rounded-xl p-4 mt-2">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle size={16} className="text-blue-600" />
@@ -114,8 +135,6 @@ const QuickLinks = () => {
       content: (
         <div className="space-y-4">
           <p className="text-gray-600 text-sm">Click on any element to view its properties:</p>
-          
-          {/* Simplified Periodic Table Grid */}
           <div className="grid grid-cols-8 gap-1 text-xs">
             {[
               'H', 'He',
@@ -132,7 +151,6 @@ const QuickLinks = () => {
               </button>
             ))}
           </div>
-          
           <div className="bg-purple-50 rounded-xl p-4 mt-2">
             <div className="flex items-center gap-2 mb-2">
               <Atom size={16} className="text-purple-600" />
@@ -145,7 +163,6 @@ const QuickLinks = () => {
               <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-400 rounded"></div><span>Noble Gases</span></div>
             </div>
           </div>
-          
           <button 
             onClick={() => {
               setActiveModal(null);
@@ -161,34 +178,15 @@ const QuickLinks = () => {
   };
 
   const links = [
-    { 
-      icon: PlayCircle, 
-      title: 'Begin Experiment!', 
-      color: 'text-green-600', 
-      bg: 'bg-green-50',
-      modalKey: 'beginExperiment'
-    },
-    { 
-      icon: HelpCircle, 
-      title: 'How to', 
-      color: 'text-blue-600', 
-      bg: 'bg-blue-50',
-      modalKey: 'howTo'
-    },
-    { 
-      icon: Atom, 
-      title: 'Periodic Table', 
-      color: 'text-purple-600', 
-      bg: 'bg-purple-50',
-      modalKey: 'periodicTable'
-    },
+    { icon: PlayCircle, title: 'Begin Experiment!', color: 'text-green-600', bg: 'bg-green-50', modalKey: 'beginExperiment' },
+    { icon: HelpCircle, title: 'How to', color: 'text-blue-600', bg: 'bg-blue-50', modalKey: 'howTo' },
+    { icon: Atom, title: 'Periodic Table', color: 'text-purple-600', bg: 'bg-purple-50', modalKey: 'periodicTable' },
   ];
 
   return (
     <>
       <div className="bg-white rounded-2xl p-6 shadow-sm">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Links</h3>
-        
         <div className="space-y-3">
           {links.map((link, index) => (
             <button
@@ -208,42 +206,8 @@ const QuickLinks = () => {
             </button>
           ))}
         </div>
-
-        {/* Today's Suggestion */}
-        <div className="mt-6 pt-4 border-t border-gray-100">
-          <div className="flex items-center mb-3">
-            <Calendar size={16} className="text-gray-400 mr-2" />
-            <span className="text-sm font-medium text-gray-600">Today's Suggestion</span>
-          </div>
-          <div 
-            onClick={() => {
-              setActiveModal('beginExperiment');
-            }}
-            className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 cursor-pointer hover:shadow-md transition"
-          >
-            <p className="text-sm text-gray-700 font-medium">Acid-Base Titration</p>
-            <p className="text-xs text-gray-500 mt-1">Learn about pH indicators and neutralization</p>
-            <button className="mt-3 text-blue-600 text-sm font-semibold flex items-center hover:text-blue-700">
-              Start now
-              <ChevronRight size={16} className="ml-1" />
-            </button>
-          </div>
-        </div>
-
-        {/* Progress Overview */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-500">Today's Progress</span>
-            <span className="text-xs font-semibold text-blue-600">60%</span>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full w-3/5 bg-blue-600 rounded-full"></div>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">3/5 experiments completed</p>
-        </div>
       </div>
 
-      {/* Render active modal */}
       {activeModal && modals[activeModal] && (
         <Modal
           isOpen={true}

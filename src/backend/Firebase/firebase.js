@@ -6,6 +6,7 @@ import {
   signOut,
   onAuthStateChanged 
 } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // Your Firebase configuration from environment variables
 const firebaseConfig = {
@@ -45,6 +46,7 @@ if (!validateConfig()) {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 // Authentication functions
 export const registerUser = (email, password) => {
@@ -68,4 +70,4 @@ export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
 
-export { auth };
+export { auth, db };
