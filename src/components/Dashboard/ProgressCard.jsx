@@ -4,9 +4,11 @@ import { useProgress } from '../../backend/Firebase/useProgress';
 
 const ProgressCard = () => {
   const { experiments, loading: expLoading } = useExperiments();
-  const { getStatus } = useProgress();
+  // Now we get the loading state from our provider
+  const { getStatus, loading: progLoading } = useProgress();
 
-  if (expLoading) {
+  // If either data source is loading, show a placeholder
+  if (expLoading || progLoading) {
     return <div className="bg-white rounded-xl p-4 shadow-sm">Loading progress...</div>;
   }
 

@@ -76,3 +76,82 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Liquid fill animation */
+@keyframes fillLiquid {
+  0% { height: 0%; }
+  100% { height: 80%; }
+}
+
+.liquid-fill {
+  animation: fillLiquid 0.6s ease-out forwards;
+}
+
+/* Drop falling effect */
+@keyframes dropFall {
+  0% { transform: translateY(-20px); opacity: 1; }
+  80% { transform: translateY(60px); opacity: 1; }
+  100% { transform: translateY(80px); opacity: 0; }
+}
+
+.drop-animation {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 6px;
+  height: 12px;
+  background-color: #60a5fa;
+  border-radius: 50%;
+  animation: dropFall 0.5s ease-in forwards;
+  pointer-events: none;
+}
+
+/* Pour animation (burette tilt) */
+@keyframes pourTilt {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.pour-animation {
+  animation: pourTilt 0.4s ease-in-out;
+  transform-origin: top center;
+}
+
+/* Beaker colour transition */
+@keyframes colorChange {
+  0% { background-color: rgba(255, 255, 255, 0.2); }
+  100% { background-color: rgba(249, 168, 212, 0.8); } /* pink */
+}
+
+.color-change {
+  animation: colorChange 0.8s ease-out forwards;
+}
+
+/* Pulsing glow for click target */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(250, 204, 21, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+}
+
+.pulse-glow {
+  animation: pulseGlow 1s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Burette liquid level transition */
+.burette-liquid {
+  transition: height 0.5s ease-out;
+}
+
+/* Success checkmark pop */
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.success-pop {
+  animation: popIn 0.3s ease-out forwards;
+}

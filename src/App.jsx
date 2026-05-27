@@ -1,11 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './backend/Firebase/AuthContext';
+import { ProgressProvider } from './backend/Firebase/useProgress'; 
 import Sidebar from './components/Layout/Sidebar';
 import Landing from './pages/Landing';
-import Dashboard from './pages/dashboard';
-import Experiments from './pages/experiments';
-import Library from './pages/library';
+import Dashboard from './pages/Dashboard';
+import Experiments from './pages/Experiments';
+import Library from './pages/Library';
+import ExperimentPage from './pages/ExperimentPage';
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }) => {
@@ -35,43 +37,15 @@ const AuthenticatedLayout = ({ children }) => (
   </div>
 );
 
+// ProtectedRoute and AuthenticatedLayout components
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public Landing Page */}
       <Route path="/" element={<Landing />} />
-      
-      {/* Protected Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <AuthenticatedLayout>
-              <Dashboard />
-            </AuthenticatedLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/experiments"
-        element={
-          <ProtectedRoute>
-            <AuthenticatedLayout>
-              <Experiments />
-            </AuthenticatedLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/library"
-        element={
-          <ProtectedRoute>
-            <AuthenticatedLayout>
-              <Library />
-            </AuthenticatedLayout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/dashboard" element={<ProtectedRoute><AuthenticatedLayout><Dashboard /></AuthenticatedLayout></ProtectedRoute>} />
+      <Route path="/experiments" element={<ProtectedRoute><AuthenticatedLayout><Experiments /></AuthenticatedLayout></ProtectedRoute>} />
+      <Route path="/library" element={<ProtectedRoute><AuthenticatedLayout><Library /></AuthenticatedLayout></ProtectedRoute>} />
+      <Route path="/experiment/:id" element={<ProtectedRoute><ExperimentPage /></ProtectedRoute>} />
     </Routes>
   );
 }
@@ -80,7 +54,10 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        {/* 2. WRAP YOUR APP WITH THE PROVIDER */}
+        <ProgressProvider>
+          <AppRoutes />
+        </ProgressProvider>
       </AuthProvider>
     </Router>
   );
