@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect} from 'react';
 import { Book, BookOpen, Video, FileText, Search } from 'lucide-react';
 
 const Library = () => {
+  const [loading, setLoading] = useState(true);
+
+    // Simulate a network fetch
+    useEffect(() => {
+      const timer = setTimeout(() => setLoading(false), 200);
+      return () => clearTimeout(timer);
+    }, []);
+
   const resources = [
     { id: 1, title: 'Chemistry Lab Manual', type: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-100' },
     { id: 2, title: 'Periodic Table Guide', type: 'Interactive', icon: Book, color: 'text-blue-600', bg: 'bg-blue-100' },
@@ -10,6 +18,25 @@ const Library = () => {
     { id: 5, title: 'Video Tutorials', type: 'Video', icon: Video, color: 'text-orange-600', bg: 'bg-orange-100' },
     { id: 6, title: 'Research Papers', type: 'PDF', icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100' },
   ];
+
+  // Skeleton Loader
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="h-8 w-32 bg-gray-200 rounded-lg animate-pulse mb-6"></div>
+        <div className="h-12 w-full bg-gray-200 rounded-xl animate-pulse mb-6"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 h-40 animate-pulse">
+              <div className="bg-gray-200 h-10 w-10 rounded-lg mb-3"></div>
+              <div className="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">

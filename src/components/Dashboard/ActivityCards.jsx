@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
@@ -22,6 +22,12 @@ import Modal from '../Common/Modal';
 const ActivityCards = () => {
   const navigate = useNavigate();
   
+  const [pageLoading, setPageLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Modal states
   const [activeModal, setActiveModal] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -284,6 +290,25 @@ const ActivityCards = () => {
   const closeModal = () => {
     setActiveModal(null);
   };
+
+  // --- Skeleton Loader Render ---
+  if (pageLoading) {
+    return (
+      <div>
+        <div className="h-7 w-32 bg-gray-200 rounded animate-pulse mb-4"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 animate-pulse">
+              <div className="h-12 w-12 bg-gray-200 rounded-lg mb-3"></div>
+              <div className="h-5 w-1/2 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-3/4 bg-gray-200 rounded mb-4"></div>
+              <div className="h-3 w-1/3 bg-gray-200 rounded mt-4"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

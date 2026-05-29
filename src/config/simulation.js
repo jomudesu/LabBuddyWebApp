@@ -88,5 +88,28 @@ export const simulationConfigs = {
     },
   },
 
-  // ── Add more experiment configs here ──────────────────────────────────────
+  flame_test: {
+    id: 'flame_test',
+    title: 'Flame Test Analysis',
+    benchComponent: 'FlameTestBench',
+    equipment: ['Bunsen Burner', 'Nichrome Wire', 'Copper (Cu)', 'Strontium (Sr)', 'Sodium (Na)'],
+    steps: [
+      { id: 'step_1', instruction: 'Turn on the Bunsen burner to establish a base blue flame.', targetElement: 'burner_valve', animation: 'ignite' },
+      { id: 'step_2', instruction: 'Dip the nichrome wire into the Copper (Cu) sample.', targetElement: 'sample_cu', animation: 'dip' },
+      { id: 'step_3', instruction: 'Place the coated wire into the flame and observe the color.', targetElement: 'flame', animation: 'burn_cu' },
+      { id: 'step_4', instruction: 'Clean the wire and dip it into the Strontium (Sr) sample.', targetElement: 'sample_sr', animation: 'dip' },
+      { id: 'step_5', instruction: 'Place the wire into the flame and observe the color.', targetElement: 'flame', animation: 'burn_sr' }
+    ],
+    computeState: (actionState) => {
+      return {
+        isBurnerOn: actionState >= 1,
+        // Keep the sample active while dipping AND burning
+        activeSample: (actionState === 2 || actionState === 3) ? 'Copper (Cu)' : (actionState === 4 || actionState === 5) ? 'Strontium (Sr)' : null,
+        flameColor: actionState === 3 ? 'green' : actionState === 5 ? 'red' : actionState >= 1 ? 'blue' : 'none',
+        isComplete: actionState >= 5
+      };
+    }
+  }
 };
+
+

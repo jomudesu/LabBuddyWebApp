@@ -19,7 +19,6 @@ const TitrationBench = ({
   const displayBuretteFill = buretteFilled ? buretteFill : 0;
 
   return (
-    // Restored the vibrant, translucent glass background
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 flex flex-col justify-center relative overflow-hidden h-full min-h-[500px]">
       
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
@@ -29,44 +28,48 @@ const TitrationBench = ({
           
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-3/4 h-8 bg-black/20 rounded-[100%] blur-md z-0" />
 
-          {/* ── Burette (Restored clear white glass) ── */}
-          <div className="flex flex-col items-center z-10 group">
+          {/* ── Burette ── */}
+          <div className="flex flex-col items-center z-10">
+            {/* Wrapper handles the unified hover, click, and pulse glow */}
             <div
-              className={`
-                relative w-10 h-48 cursor-pointer transition-all duration-300 ease-out
-                bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7),_0_5px_15px_rgba(0,0,0,0.1)]
-                border-x border-t border-white/70
-                ${currentStep.targetElement === 'burette' && !showVolumeReading ? 'ring-4 ring-yellow-400/80 pulse-glow hover:-translate-y-1 hover:shadow-xl' : 'hover:-translate-y-1 hover:border-white/90 hover:shadow-lg'}
-                ${showVolumeReading ? 'ring-4 ring-cyan-400' : ''}
-              `}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1 group ${
+                currentStep.targetElement === 'burette' && !showVolumeReading ? 'pulse-glow' : ''
+              }`}
               onClick={() => handleElementClick('burette')}
             >
-              <div className="absolute bottom-0 w-full transition-all duration-700 bg-gradient-to-r from-blue-500 via-blue-300 to-blue-500 opacity-90" style={{ height: `${displayBuretteFill}%` }} />
-              
-              {/* Dark tick marks so they contrast against the white glass and blue liquid */}
-              {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
-                <div key={pct}>
-                  <div className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${pct}%`, width: pct % 20 === 0 ? '40%' : '20%' }} />
-                  {pct % 20 === 0 && <span className="absolute right-[45%] text-[10px] text-gray-800 font-mono z-10 font-bold" style={{ top: `calc(${pct}% - 7px)` }}>{pct / 2}</span>}
-                </div>
-              ))}
+              {/* Inner Glass Body (CHANGED to full 'border' to include the bottom line) */}
+              <div
+                className={`
+                  relative w-10 h-48
+                  bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7),_0_5px_15px_rgba(0,0,0,0.1)]
+                  border border-white/70 transition-all duration-300
+                  ${currentStep.targetElement === 'burette' && !showVolumeReading ? 'shadow-xl border-white/90' : 'group-hover:border-white/90 group-hover:shadow-lg'}
+                  ${showVolumeReading ? 'ring-2 ring-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : ''}
+                `}
+              >
+                <div className="absolute bottom-0 w-full transition-all duration-700 bg-gradient-to-r from-blue-500 via-blue-300 to-blue-500 opacity-90" style={{ height: `${displayBuretteFill}%` }} />
+                
+                {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
+                  <div key={pct}>
+                    <div className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${pct}%`, width: pct % 20 === 0 ? '40%' : '20%' }} />
+                    {pct % 20 === 0 && <span className="absolute right-[45%] text-[10px] text-gray-800 font-mono z-10 font-bold" style={{ top: `calc(${pct}% - 7px)` }}>{pct / 2}</span>}
+                  </div>
+                ))}
 
-              {/* Volume reading overlay */}
-              {showVolumeReading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm rounded-t success-pop z-20">
-                  <span className="text-[10px] text-cyan-300 font-bold tracking-wider uppercase mb-1">Vol</span>
-                  <span className="text-sm font-bold text-white font-mono">{addedVolume.toFixed(1)}</span>
-                </div>
-              )}
+                {showVolumeReading && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm rounded-t success-pop z-20">
+                    <span className="text-[10px] text-cyan-300 font-bold tracking-wider uppercase mb-1">Vol</span>
+                    <span className="text-sm font-bold text-white font-mono">{addedVolume.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="w-8 h-3.5 bg-gradient-to-b from-gray-300 to-gray-500 rounded shadow-md z-10 border border-white/40 transition-all duration-300 group-hover:brightness-110" />
+              <div className="w-1.5 h-6 bg-gradient-to-b from-gray-200 to-white border-x border-gray-400 z-10 transition-all duration-300 group-hover:brightness-110" />
             </div>
-            <div className="w-8 h-3.5 bg-gradient-to-b from-gray-300 to-gray-500 rounded shadow-md z-10 border border-white/40" />
-            <div className="w-1.5 h-6 bg-gradient-to-b from-gray-200 to-white border-x border-gray-400 z-10" />
-            
-            {/* Localized dark bubble for readable label */}
-            <p className="text-xs text-white/90 mt-3 font-semibold tracking-wide bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md">Burette</p>
+            <p className="text-xs text-white/90 mt-3 font-semibold tracking-wide bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md cursor-default pointer-events-none">Burette</p>
           </div>
 
-          {/* ── Beaker (Restored clear white glass) ── */}
+          {/* ── Beaker ── */}
           <div className="flex flex-col items-center z-10">
             <div className="relative group">
               <div
@@ -74,7 +77,7 @@ const TitrationBench = ({
                   relative w-36 h-36 cursor-pointer transition-all duration-300 ease-out
                   bg-white/30 backdrop-blur-md rounded-b-[1.5rem] border-x-2 border-b-2 border-white/70
                   shadow-[inset_0_4px_15px_rgba(255,255,255,0.6),_0_8px_20px_rgba(0,0,0,0.1)]
-                  ${currentStep.targetElement === 'beaker' ? 'ring-4 ring-yellow-400/80 pulse-glow hover:-translate-y-1 hover:shadow-xl' : 'hover:-translate-y-1 hover:shadow-lg'}
+                  ${currentStep.targetElement === 'beaker' ? 'pulse-glow hover:-translate-y-1 hover:shadow-xl hover:border-white/90' : 'hover:-translate-y-1 hover:shadow-lg hover:border-white/90'}
                 `}
                 onClick={() => handleElementClick('beaker')}
               >
@@ -90,7 +93,7 @@ const TitrationBench = ({
               </div>
               {showDrop && <div className="drop-animation z-30" style={{ top: '-24px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#60a5fa', boxShadow: '0 0 8px #60a5fa' }} />}
             </div>
-            <p className="text-xs text-white/90 mt-4 font-semibold tracking-wide bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md">Beaker</p>
+            <p className="text-xs text-white/90 mt-4 font-semibold tracking-wide bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md cursor-default pointer-events-none">Beaker</p>
           </div>
 
           {/* ── Indicator bottle ── */}
@@ -102,7 +105,7 @@ const TitrationBench = ({
                   <span className="text-[10px] text-white font-bold tracking-wide">PhPh</span>
                 </div>
               </div>
-              <p className="text-xs text-white/90 mt-2 font-semibold bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md">Indicator</p>
+              <p className="text-xs text-white/90 mt-2 font-semibold bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md cursor-default pointer-events-none">Indicator</p>
             </div>
           )}
         </div>

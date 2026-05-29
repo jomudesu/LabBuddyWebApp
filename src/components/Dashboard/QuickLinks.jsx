@@ -13,6 +13,13 @@ import { useExperiments } from '../../backend/Firebase/useExperiments';
 
 const QuickLinks = () => {
   const navigate = useNavigate();
+
+  const [pageLoading, setPageLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 200);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [activeModal, setActiveModal] = useState(null);
   const [randomExperiments, setRandomExperiments] = useState([]);
   const { experiments, loading } = useExperiments();
@@ -182,6 +189,26 @@ const QuickLinks = () => {
     { icon: HelpCircle, title: 'How to', color: 'text-blue-600', bg: 'bg-blue-50', modalKey: 'howTo' },
     { icon: Atom, title: 'Periodic Table', color: 'text-purple-600', bg: 'bg-purple-50', modalKey: 'periodicTable' },
   ];
+
+  // --- Skeleton Loader Render ---
+  if (pageLoading) {
+    return (
+      <div className="bg-white rounded-2xl p-6 shadow-sm animate-pulse">
+        <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent">
+              <div className="flex items-center w-full">
+                <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                <div className="ml-3 h-5 w-24 bg-gray-200 rounded"></div>
+              </div>
+              <div className="w-5 h-5 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

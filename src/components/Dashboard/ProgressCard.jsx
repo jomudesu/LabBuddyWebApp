@@ -4,12 +4,20 @@ import { useProgress } from '../../backend/Firebase/useProgress';
 
 const ProgressCard = () => {
   const { experiments, loading: expLoading } = useExperiments();
-  // Now we get the loading state from our provider
   const { getStatus, loading: progLoading } = useProgress();
 
-  // If either data source is loading, show a placeholder
+  // --- NEW: Skeleton Loader for Progress ---
   if (expLoading || progLoading) {
-    return <div className="bg-white rounded-xl p-4 shadow-sm">Loading progress...</div>;
+    return (
+      <div className="bg-white rounded-xl p-4 shadow-sm animate-pulse">
+        <div className="flex justify-between items-center mb-2">
+          <div className="h-4 w-32 bg-gray-200 rounded"></div>
+          <div className="h-4 w-8 bg-gray-200 rounded"></div>
+        </div>
+        <div className="h-2 bg-gray-200 rounded-full mb-3"></div>
+        <div className="h-3 w-48 bg-gray-200 rounded mt-2"></div>
+      </div>
+    );
   }
 
   const completedCount = experiments.filter(exp => getStatus(exp.id) === 'completed').length;

@@ -1,9 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { CheckCircle, Thermometer, Droplet, FlaskConical } from 'lucide-react';
 import TitrationBench from './benches/TitrationBench';
+import FlameTestBench from './benches/FlameTestBench';
 
 const BenchComponentsMap = {
   TitrationBench: TitrationBench,
+  FlameTestBench: FlameTestBench,
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -15,14 +17,18 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
   const [completedStepIds, setCompletedStepIds] = useState(new Set());
   const [animating, setAnimating] = useState(false);
 
+  // Titration specific states
   const [addedVolume, setAddedVolume] = useState(0);   
   const [hasIndicator, setHasIndicator] = useState(false);
   const [showDrop, setShowDrop] = useState(false);
   const [showVolumeReading, setShowVolumeReading] = useState(false);
   const [buretteFilled, setBuretteFilled] = useState(false);
 
-  const simState = config.computeState(addedVolume, config);
-  const { pH, indicatorColor } = simState;
+  // UNIVERSAL STATE COMPUTATION
+  // Titration relies on addedVolume. Flame Test relies on how many steps are completed.
+  const simState = experimentId === 'acid_base_titration' 
+    ? config.computeState(addedVolume, config)
+    : config.computeState(completedStepIds.size, config);
 
   const currentStep = steps[currentStepIndex];
   const allStepsDone = steps.every((s) => completedStepIds.has(s.id));
@@ -41,15 +47,26 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
     setAnimating(true);
 
     switch (currentStep.animation) {
+      // Titration Specific Animations
       case 'fill':
         setBuretteFilled(true); await delay(700); markComplete(currentStep.id); advanceStep(); break;
       case 'drop':
         setShowDrop(true); setTimeout(() => setShowDrop(false), 500); setHasIndicator(true); await delay(700); markComplete(currentStep.id); advanceStep(); break;
       case 'pour':
-        setShowDrop(true); setTimeout(() => setShowDrop(false), 500); setAddedVolume(addedVolume + mlPerClick); const newState = config.computeState(addedVolume + mlPerClick, config); await delay(700); if (newState.isComplete) { markComplete(currentStep.id); advanceStep(); } break;
+        setShowDrop(true); setTimeout(() => setShowDrop(false), 500); setAddedVolume(addedVolume + mlPerClick); 
+        const newState = config.computeState(addedVolume + mlPerClick, config); 
+        await delay(700); 
+        if (newState.isComplete) { markComplete(currentStep.id); advanceStep(); } 
+        break;
       case 'none':
         setShowVolumeReading(true); await delay(900); setShowVolumeReading(false); markComplete(currentStep.id); break;
-      default: break;
+      
+      // UNIVERSAL ANIMATION HANDLER (For Flame Test and future experiments)
+      default:
+        await delay(700); 
+        markComplete(currentStep.id); 
+        advanceStep(); 
+        break;
     }
     setAnimating(false);
   };
@@ -59,38 +76,65 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
     return step.instruction;
   };
 
-  const uiState = { addedVolume, showVolumeReading, showDrop, buretteFilled, hasIndicator };
+  const uiState = { addedVolume, showVolumeReading, showDrop, buretteFilled, hasIndicator, animating };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch min-h-[600px] lg:h-[calc(100vh-130px)]">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch min-h-[600px] lg:h-[calc(100vh-130px)] animate-fade-in-up">
 
-      {/* ── LEFT COLUMN – Telemetry & Inventory (Span 1) ── */}
+      {/* ── LEFT COLUMN – Telemetry & Inventory ── */}
       <div className="lg:col-span-1 flex flex-col gap-6 h-full">
         
-        {/* Real-time data - Bright Glass outer, Dark bubble inner */}
+        {/* Real-time data Panel */}
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 shadow-xl border border-white/20 shrink-0">
           <h3 className="text-xs font-bold text-white/90 uppercase tracking-widest mb-4 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse shadow-[0_0_8px_rgba(248,113,113,0.8)]" /> Live Telemetry
           </h3>
           <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 hover:bg-black/35 transition-all duration-200 cursor-default group flex-wrap gap-2">
-              <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Droplet size={16} className="text-blue-400 flex-shrink-0" /> pH Reading</span>
-              <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${pH < 7 ? 'text-red-400' : pH > 7 ? 'text-blue-400' : 'text-green-400'}`}>
-                {pH.toFixed(2)} {pH > 7 ? '(B)' : pH < 7 ? '(A)' : '(N)'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 hover:bg-black/35 transition-all duration-200 cursor-default group flex-wrap gap-2">
-              <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Thermometer size={16} className="text-red-400 flex-shrink-0" /> Temp</span>
-              <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-amber-300 font-bold ml-auto shadow-inner">24.5 °C</span>
-            </div>
-            <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 hover:bg-black/35 transition-all duration-200 cursor-default group flex-wrap gap-2">
-              <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-purple-400 flex-shrink-0" /> NaOH</span>
-              <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner">{addedVolume.toFixed(1)} mL</span>
-            </div>
+            
+            {/* DYNAMIC TELEMETRY BASED ON EXPERIMENT TYPE */}
+            {experimentId === 'acid_base_titration' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Droplet size={16} className="text-blue-400 flex-shrink-0" /> pH Reading</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.pH < 7 ? 'text-red-400' : simState.pH > 7 ? 'text-blue-400' : 'text-green-400'}`}>
+                    {simState.pH?.toFixed(2)} {simState.pH > 7 ? '(B)' : simState.pH < 7 ? '(A)' : '(N)'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Thermometer size={16} className="text-red-400 flex-shrink-0" /> Temp</span>
+                  <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-amber-300 font-bold ml-auto shadow-inner">24.5 °C</span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-purple-400 flex-shrink-0" /> NaOH</span>
+                  <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner">{addedVolume.toFixed(1)} mL</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Thermometer size={16} className="text-red-400 flex-shrink-0" /> Burner Status</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.isBurnerOn ? 'text-green-400' : 'text-gray-400'}`}>
+                    {simState.isBurnerOn ? 'ACTIVE' : 'OFF'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-blue-400 flex-shrink-0" /> Active Sample</span>
+                  <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner uppercase">
+                    {simState.activeSample || 'NONE'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Droplet size={16} className="text-yellow-400 flex-shrink-0" /> Flame Color</span>
+                  <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-amber-300 font-bold ml-auto shadow-inner capitalize">
+                    {simState.flameColor || 'NONE'}
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Inventory - Bright Glass outer, Dark bubble inner */}
+        {/* Inventory Panel */}
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 shadow-xl border border-white/20 flex-1 flex flex-col">
           <h3 className="text-xs font-bold text-white/90 uppercase tracking-widest mb-4 shrink-0">Inventory</h3>
           <div className="flex flex-wrap gap-2">
@@ -106,7 +150,7 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
         </div>
       </div>
 
-      {/* ── CENTER COLUMN – Dynamic Visual Lab Bench (Span 2) ────────────────── */}
+      {/* ── CENTER COLUMN – Dynamic Visual Lab Bench ── */}
       <div className="lg:col-span-2 flex flex-col h-full">
         {ActiveBenchComponent ? (
           <ActiveBenchComponent 
@@ -117,7 +161,7 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
           >
             {allStepsDone && (
               <div className="mt-8 flex justify-center animate-fade-in-up z-20">
-                <button onClick={onComplete} className="px-8 py-3 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-xl flex items-center gap-2 hover:from-green-500 hover:to-green-700 transition-all duration-300 shadow-[0_0_15px_rgba(74,222,128,0.4)] hover:shadow-[0_0_20px_rgba(74,222,128,0.6)] hover:-translate-y-1 font-bold text-sm tracking-wide border border-green-300/50 success-pop">
+                <button onClick={onComplete} className="px-8 py-3 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-xl flex items-center gap-2 hover:from-green-500 hover:to-green-700 transition-all duration-300 shadow-[0_0_15px_rgba(74,222,128,0.4)] hover:-translate-y-1 font-bold text-sm tracking-wide border border-green-300/50">
                   <CheckCircle size={20} />
                   Mark Experiment Complete
                 </button>
@@ -131,10 +175,8 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
         )}
       </div>
 
-      {/* ── RIGHT COLUMN – Procedure Protocol (Span 1) ────────────────────── */}
+      {/* ── RIGHT COLUMN – Procedure Protocol ── */}
       <div className="lg:col-span-1 flex flex-col h-full overflow-hidden">
-        
-        {/* Procedure & step list - Bright Glass outer */}
         <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 shadow-xl border border-white/20 flex-1 flex flex-col overflow-hidden">
           <h3 className="text-xs font-bold text-white/90 uppercase tracking-widest mb-4 shrink-0">Procedure Protocol</h3>
           
@@ -154,24 +196,16 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
                 <div 
                   key={step.id} 
                   className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-300 cursor-default ${
-                    active 
-                      ? 'bg-blue-500/30 border border-blue-400/50 shadow-md backdrop-blur-sm' 
-                      : done 
-                        ? 'bg-black/10 border border-transparent hover:bg-black/20' 
-                        : 'bg-black/25 border border-white/5 hover:bg-black/35'
+                    active ? 'bg-blue-500/30 border border-blue-400/50 shadow-md backdrop-blur-sm' : done ? 'bg-black/10 hover:bg-black/20' : 'bg-black/25 border border-white/5 hover:bg-black/35'
                   }`}
                 >
-                  <div className={`mt-0.5 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                    done ? 'bg-green-500 text-white shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 
-                    active ? 'bg-yellow-400 text-blue-900 ring-2 ring-yellow-200/50 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 
-                    'bg-white/10 text-white/60 border border-white/10'
+                  <div className={`mt-0.5 w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold ${
+                    done ? 'bg-green-500 text-white shadow-[0_0_8px_rgba(34,197,94,0.5)]' : active ? 'bg-yellow-400 text-blue-900 ring-2 ring-yellow-200/50 shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-white/10 text-white/60'
                   }`}>
                     {done ? '✓' : i + 1}
                   </div>
                   <p className={`text-xs leading-relaxed mt-0.5 ${
-                    active ? 'text-white font-bold' : 
-                    done ? 'text-white/50 line-through' : 
-                    'text-white/80 font-medium'
+                    active ? 'text-white font-bold' : done ? 'text-white/50 line-through' : 'text-white/80 font-medium'
                   }`}>
                     {getStepInstruction(step, active)}
                   </p>

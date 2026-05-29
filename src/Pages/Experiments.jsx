@@ -9,7 +9,46 @@ const Experiments = () => {
   const { experiments, loading, error } = useExperiments();
   const { getStatus, updateExperimentStatus } = useProgress();
 
-  if (loading) return <div className="p-8 text-center">Loading Experiments...</div>;
+  // Skeleton Loader
+  if (loading) {
+    return (
+      <div className="p-8">
+        {/* Skeleton Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse"></div>
+          <div className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+        </div>
+
+        {/* Skeleton Search Bar */}
+        <div className="relative mb-6">
+          <div className="h-12 w-full bg-gray-200 rounded-xl animate-pulse"></div>
+        </div>
+
+        {/* Skeleton Grid Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col h-[220px]">
+              {/* Icon placeholder */}
+              <div className="bg-gray-200 h-12 w-12 rounded-lg mb-3 animate-pulse"></div>
+              {/* Title & Category placeholders */}
+              <div className="h-5 w-3/4 bg-gray-200 rounded mb-2 animate-pulse"></div>
+              <div className="h-4 w-1/2 bg-gray-200 rounded mb-4 animate-pulse"></div>
+              
+              {/* Tags placeholder */}
+              <div className="mt-auto flex justify-between items-center mb-3">
+                <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                <div className="h-5 w-24 bg-gray-200 rounded-full animate-pulse"></div>
+              </div>
+              
+              {/* Button placeholder */}
+              <div className="h-10 w-full bg-gray-200 rounded-lg animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   const handleStart = async (exp) => {
