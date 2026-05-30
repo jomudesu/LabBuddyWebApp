@@ -27,16 +27,20 @@ const CrystalGrowthBench = ({
             {/* Suspended Seed Crystal & String */}
             <div 
               className={`absolute top-[-80px] z-20 flex flex-col items-center transition-all duration-1000 ease-in-out cursor-pointer ${
-                crystalState !== 'none' ? 'translate-y-[120px]' : 'translate-y-0'
+                crystalState !== 'none' ? 'translate-y-[70px]' : 'translate-y-0'
               } ${currentStep?.targetElement === 'seed_string' ? 'pulse-glow hover:-translate-y-2' : ''}`}
               onClick={() => handleElementClick('seed_string')}
             >
               {/* String */}
               <div className="w-0.5 h-24 bg-gray-300"></div>
-              {/* The Crystal (Scales up when grown!) */}
+              
               <div 
-                className={`w-6 h-8 bg-blue-500 border border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.6)] transition-all duration-1000 ease-in-out ${
-                  crystalState === 'grown' ? 'scale-[2.5] bg-blue-600' : crystalState === 'seed' ? 'scale-100' : 'scale-0'
+                className={`w-6 h-8 shadow-[0_0_15px_rgba(59,130,246,0.6)] transition-all duration-1000 ease-in-out ${
+                  crystalState === 'grown' 
+                    ? 'scale-[2.5] bg-gradient-to-br from-blue-400 via-blue-500 to-blue-700' 
+                    : crystalState === 'seed' 
+                      ? 'scale-100 bg-blue-500' 
+                      : 'scale-0'
                 }`}
                 style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }}
               ></div>
@@ -82,15 +86,16 @@ const CrystalGrowthBench = ({
           </div>
 
           {/* ── Tools (Solute & Stirrer) ── */}
-          <div className="flex flex-col gap-6 z-10 mb-8">
+          {/* CHANGED: Switched to flex-row items-end so they rest side-by-side on the virtual table */}
+          <div className="flex flex-row items-end gap-8 z-10 mb-8">
             
             {/* CuSO4 Powder Jar */}
             <div 
               className={`flex flex-col items-center cursor-pointer transition-all duration-300 group ${currentStep?.targetElement === 'solute_jar' ? 'pulse-glow hover:-translate-y-2' : ''}`}
               onClick={() => handleElementClick('solute_jar')}
             >
-              <div className={`w-16 h-20 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-transform duration-500 ${target === 'solute_jar' && animating ? '-translate-x-12 -translate-y-12 -rotate-45' : ''}`}>
-                {/* Powder disappears when poured */}
+              {/* CHANGED: Boosted translation to account for the new lower starting position */}
+              <div className={`w-16 h-20 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-transform duration-500 ${target === 'solute_jar' && animating ? '-translate-x-[90px] -translate-y-[180px] -rotate-45' : ''}`}>
                 <div className={`w-full transition-all duration-1000 bg-blue-500 rounded-b-lg ${simState.saturation !== 'None' ? 'h-0' : 'h-1/2'}`}></div>
               </div>
               <span className="text-[10px] font-bold text-white mt-2 px-2 py-1 bg-black/40 rounded border border-white/10">CuSO₄</span>
@@ -98,10 +103,15 @@ const CrystalGrowthBench = ({
 
             {/* Stirring Rod */}
             <div 
-              className={`flex flex-col items-center cursor-pointer transition-all duration-300 group ${currentStep?.targetElement === 'stirring_rod' ? 'pulse-glow hover:-translate-x-2' : ''}`}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-300 group ${currentStep?.targetElement === 'stirring_rod' ? 'pulse-glow hover:-translate-y-2' : ''}`}
               onClick={() => handleElementClick('stirring_rod')}
             >
-              <div className={`w-2 h-32 bg-white/40 backdrop-blur-md border border-white/60 rounded-full shadow-inner transition-transform duration-700 ${target === 'stirring_rod' && animating ? '-translate-x-32 translate-y-8 rotate-12 animate-pulse' : 'rotate-[20deg]'}`}></div>
+              {/* CHANGED: Increased X translation because sitting on the right pushes it further out from the beaker */}
+              <div 
+                className={`w-2 h-32 bg-white/40 backdrop-blur-md border border-white/60 rounded-full shadow-inner transition-transform duration-700 ${
+                  target === 'stirring_rod' && animating ? '-translate-x-[250px] -translate-y-[130px] rotate-12 animate-pulse' : 'rotate-[20deg]'
+                }`}
+              ></div>
               <span className="text-[10px] font-bold text-white mt-2 px-2 py-1 bg-black/40 rounded border border-white/10">Glass Rod</span>
             </div>
 
