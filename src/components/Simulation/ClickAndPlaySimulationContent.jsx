@@ -1,10 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom, Zap, Wind, Microscope, Waves } from 'lucide-react';
+import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom, Zap, Wind, Microscope, Waves, Timer, Palette, Pipette, Activity, Layers } from 'lucide-react';
 import TitrationBench from './benches/TitrationBench';
 import FlameTestBench from './benches/FlameTestBench';
 import CrystalGrowthBench from './benches/CrystalGrowthBench';
 import ElectrolysisBench from './benches/ElectrolysisBench';
 import OsmosisBench from './benches/OsmosisBench';
+import ChromatographyBench from './benches/ChromatographyBench';
+import PHScaleBench from './benches/PHScaleBench';
 
 const BenchComponentsMap = {
   TitrationBench: TitrationBench,
@@ -12,6 +14,8 @@ const BenchComponentsMap = {
   CrystalGrowthBench: CrystalGrowthBench,
   ElectrolysisBench: ElectrolysisBench,
   OsmosisBench: OsmosisBench,
+  ChromatographyBench: ChromatographyBench,
+  PHScaleBench: PHScaleBench,
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -31,7 +35,6 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
   const [buretteFilled, setBuretteFilled] = useState(false);
 
   // UNIVERSAL STATE COMPUTATION
-  // Titration relies on addedVolume. Flame Test relies on how many steps are completed.
   const simState = experimentId === 'acid_base_titration' 
     ? config.computeState(addedVolume, config)
     : config.computeState(completedStepIds.size, config);
@@ -67,7 +70,7 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
       case 'none':
         setShowVolumeReading(true); await delay(900); setShowVolumeReading(false); markComplete(currentStep.id); break;
       
-      // UNIVERSAL ANIMATION HANDLER (For Flame Test and future experiments)
+      // UNIVERSAL ANIMATION HANDLER
       default:
         await delay(700); 
         markComplete(currentStep.id); 
@@ -175,6 +178,48 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
                   <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Microscope size={16} className="text-purple-400 flex-shrink-0" /> Cell Condition</span>
                   <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.cellState === 'normal' ? 'text-green-400' : simState.cellState === 'invisible' ? 'text-gray-500' : 'text-amber-400'}`}>
                     {simState.cellState}
+                  </span>
+                </div>
+              </>
+            ) : experimentId === 'paper_chromatography' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Timer size={16} className="text-amber-400 flex-shrink-0" /> Phase</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.developmentPhase === 'Complete' ? 'text-green-400' : 'text-yellow-300'}`}>
+                    {simState.developmentPhase}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Waves size={16} className="text-blue-400 flex-shrink-0" /> Solvent Front</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-white font-bold ml-auto shadow-inner uppercase`}>
+                    {simState.isCovered ? '12.0 cm' : simState.isSuspended ? '1.5 cm' : '0.0 cm'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Palette size={16} className="text-pink-400 flex-shrink-0" /> Separation</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.isCovered ? 'text-cyan-300' : 'text-gray-400'}`}>
+                    {simState.isCovered ? '3 BANDS VISIBLE' : 'MIXED'}
+                  </span>
+                </div>
+              </>
+            ) : experimentId === 'ph_scale_measurement' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Pipette size={16} className="text-pink-400 flex-shrink-0" /> Active Sample</span>
+                  <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase text-cyan-300">
+                    {simState.activePH === 2.5 ? 'Lemon Juice' : simState.activePH === 7 ? 'Distilled H₂O' : simState.activePH === 11 ? 'Ammonia' : 'None'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Activity size={16} className="text-yellow-400 flex-shrink-0" /> pH Reading</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-white font-bold ml-auto shadow-inner uppercase ${simState.activePH < 7 ? 'text-red-400' : simState.activePH > 7 ? 'text-indigo-400' : simState.activePH === 7 ? 'text-green-400' : ''}`}>
+                    {simState.activePH ? simState.activePH.toFixed(1) : '-'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Layers size={16} className="text-blue-400 flex-shrink-0" /> Class</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase text-gray-300`}>
+                    {simState.activeClassification}
                   </span>
                 </div>
               </>

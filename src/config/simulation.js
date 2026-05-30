@@ -181,7 +181,54 @@ export const simulationConfigs = {
         isComplete: actionState >= 4
       };
     }
-  }
+  },
+
+  paper_chromatography: {
+    id: 'paper_chromatography',
+    title: 'Paper Chromatography',
+    benchComponent: 'ChromatographyBench',
+    equipment: ['Chromatography Paper', 'Beaker 250mL', 'Solvent', 'Black Ink', 'Pencil', 'Watch Glass'],
+    steps: [
+      { id: 'step_1', instruction: 'Draw a horizontal baseline near the bottom of the paper using a pencil.', targetElement: 'pencil', animation: 'draw' },
+      { id: 'step_2', instruction: 'Spot the black ink mixture onto the center of the baseline.', targetElement: 'ink_dropper', animation: 'spot' },
+      { id: 'step_3', instruction: 'Suspend the paper in the beaker so the solvent sits below the baseline.', targetElement: 'paper', animation: 'suspend' },
+      { id: 'step_4', instruction: 'Cover the beaker with a watch glass and allow the solvent to develop.', targetElement: 'watch_glass', animation: 'develop' }
+    ],
+    computeState: (actionState) => {
+      return {
+        hasLine: actionState >= 1,
+        hasSpot: actionState >= 2,
+        isSuspended: actionState >= 3,
+        isCovered: actionState >= 4,
+        developmentPhase: actionState >= 4 ? 'Complete' : actionState >= 3 ? 'Submerged' : 'Preparation',
+        isComplete: actionState >= 4
+      };
+    }
+  },
+
+  ph_scale_measurement: {
+    id: 'ph_scale_measurement',
+    title: 'pH Scale Measurement',
+    benchComponent: 'PHScaleBench',
+    equipment: ['Universal Indicator Paper', 'Watch Glasses', 'Lemon Juice (Acid)', 'Distilled H₂O (Neutral)', 'Ammonia (Base)', 'pH Color Chart'],
+    steps: [
+      { id: 'step_1', instruction: 'Place Universal Indicator paper strips onto the three watch glasses.', targetElement: 'paper_stack', animation: 'place' },
+      { id: 'step_2', instruction: 'Add a drop of Lemon Juice to the first strip. Observe the acidic color change (Red).', targetElement: 'lemon_drop', animation: 'drop' },
+      { id: 'step_3', instruction: 'Add Distilled Water to the second strip. Observe the neutral color (Green).', targetElement: 'water_drop', animation: 'drop' },
+      { id: 'step_4', instruction: 'Add Ammonia to the third strip. Observe the alkaline color change (Dark Blue).', targetElement: 'ammonia_drop', animation: 'drop' }
+    ],
+    computeState: (actionState) => {
+      return {
+        papersPlaced: actionState >= 1,
+        lemonTested: actionState >= 2,
+        waterTested: actionState >= 3,
+        ammoniaTested: actionState >= 4,
+        activePH: actionState >= 4 ? 11 : actionState >= 3 ? 7 : actionState >= 2 ? 2.5 : null,
+        activeClassification: actionState >= 4 ? 'Strong Base' : actionState >= 3 ? 'Neutral' : actionState >= 2 ? 'Strong Acid' : '-',
+        isComplete: actionState >= 4
+      };
+    }
+  },
 };
 
 
