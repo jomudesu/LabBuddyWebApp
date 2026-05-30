@@ -109,6 +109,30 @@ export const simulationConfigs = {
         isComplete: actionState >= 5
       };
     }
+  },
+  crystal_growth: {
+    id: 'crystal_growth',
+    title: 'Crystal Growth (Copper Sulfate)',
+    benchComponent: 'CrystalGrowthBench',
+    equipment: ['Hot Plate', 'Beaker 250mL', 'CuSO₄ Powder', 'Stirring Rod', 'Seed Crystal'],
+    steps: [
+      { id: 'step_1', instruction: 'Turn on the hot plate to heat the water to 80°C.', targetElement: 'hot_plate', animation: 'heat' },
+      { id: 'step_2', instruction: 'Add Copper(II) Sulfate powder to the heated water.', targetElement: 'solute_jar', animation: 'pour' },
+      { id: 'step_3', instruction: 'Stir the solution until the powder is fully dissolved.', targetElement: 'stirring_rod', animation: 'stir' },
+      { id: 'step_4', instruction: 'Suspend the seed crystal string into the saturated solution.', targetElement: 'seed_string', animation: 'suspend' },
+      { id: 'step_5', instruction: 'Turn off the heat and let the solution cool to grow the crystal.', targetElement: 'hot_plate', animation: 'cool_grow' }
+    ],
+    computeState: (actionState) => {
+      // actionState tracks the number of completed steps
+      return {
+        isHeaterOn: actionState >= 1 && actionState < 5,
+        temperature: actionState >= 1 && actionState < 5 ? 80 : 25, // Heats up, then cools down
+        waterColor: actionState >= 2 ? 'rgba(37, 99, 235, 0.7)' : 'rgba(255, 255, 255, 0.2)', // Turns blue when powder added
+        saturation: actionState >= 3 ? 'Saturated' : actionState >= 2 ? 'Mixing' : 'None',
+        crystalState: actionState >= 5 ? 'grown' : actionState >= 4 ? 'seed' : 'none',
+        isComplete: actionState >= 5
+      };
+    }
   }
 };
 

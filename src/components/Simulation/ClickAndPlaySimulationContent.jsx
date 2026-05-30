@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { CheckCircle, Thermometer, Droplet, FlaskConical } from 'lucide-react';
+import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom } from 'lucide-react';
 import TitrationBench from './benches/TitrationBench';
 import FlameTestBench from './benches/FlameTestBench';
+import CrystalGrowthBench from './benches/CrystalGrowthBench';
 
 const BenchComponentsMap = {
   TitrationBench: TitrationBench,
   FlameTestBench: FlameTestBench,
+  CrystalGrowthBench: CrystalGrowthBench,
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -107,6 +109,27 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
                 <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
                   <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-purple-400 flex-shrink-0" /> NaOH</span>
                   <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner">{addedVolume.toFixed(1)} mL</span>
+                </div>
+              </>
+            ) : experimentId === 'crystal_growth' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Thermometer size={16} className="text-red-400 flex-shrink-0" /> Temperature</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.temperature > 30 ? 'text-red-400' : 'text-blue-400'}`}>
+                    {simState.temperature} °C
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Droplet size={16} className="text-blue-400 flex-shrink-0" /> Saturation</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner uppercase`}>
+                    {simState.saturation || 'None'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Atom size={16} className="text-purple-400 flex-shrink-0" /> Crystal Status</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.crystalState === 'grown' ? 'text-green-400' : 'text-amber-300'}`}>
+                    {simState.crystalState || 'None'}
+                  </span>
                 </div>
               </>
             ) : (
