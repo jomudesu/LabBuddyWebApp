@@ -110,6 +110,7 @@ export const simulationConfigs = {
       };
     }
   },
+
   crystal_growth: {
     id: 'crystal_growth',
     title: 'Crystal Growth (Copper Sulfate)',
@@ -131,6 +132,53 @@ export const simulationConfigs = {
         saturation: actionState >= 3 ? 'Saturated' : actionState >= 2 ? 'Mixing' : 'None',
         crystalState: actionState >= 5 ? 'grown' : actionState >= 4 ? 'seed' : 'none',
         isComplete: actionState >= 5
+      };
+    }
+  },
+
+  electrolysis_of_water: {
+    id: 'electrolysis_of_water',
+    title: 'Electrolysis of Water',
+    benchComponent: 'ElectrolysisBench',
+    equipment: ['9V Battery', 'Beaker (H₂O)', 'Dilute H₂SO₄', 'Graphite Electrodes', 'Test Tubes', 'Wires'],
+    steps: [
+      { id: 'step_1', instruction: 'Add a few drops of dilute sulfuric acid (electrolyte) to the water.', targetElement: 'electrolyte', animation: 'drop' },
+      { id: 'step_2', instruction: 'Place inverted water-filled test tubes over the electrodes.', targetElement: 'test_tubes', animation: 'place' },
+      { id: 'step_3', instruction: 'Connect the wires from the electrodes to the 9V battery.', targetElement: 'wires', animation: 'connect' },
+      { id: 'step_4', instruction: 'Turn on the power supply and observe the gas collection.', targetElement: 'power_switch', animation: 'electrolyze' }
+    ],
+    computeState: (actionState) => {
+      return {
+        hasElectrolyte: actionState >= 1,
+        tubesPlaced: actionState >= 2,
+        wiresConnected: actionState >= 3,
+        powerOn: actionState >= 4,
+        // H2 is produced at the Cathode, O2 at the Anode (2:1 ratio)
+        h2Volume: actionState >= 4 ? 10.0 : 0.0, 
+        o2Volume: actionState >= 4 ? 5.0 : 0.0,
+        isComplete: actionState >= 4
+      };
+    }
+  },
+
+  osmosis_in_cells: {
+    id: 'osmosis_in_cells',
+    title: 'Osmosis in Cells',
+    benchComponent: 'OsmosisBench',
+    equipment: ['Microscope', 'Red Blood Cells', '0.9% NaCl (Isotonic)', 'Distilled H₂O (Hypotonic)', '10% NaCl (Hypertonic)'],
+    steps: [
+      { id: 'step_1', instruction: 'Place the red blood cell sample onto the microscope slide.', targetElement: 'slide', animation: 'place' },
+      { id: 'step_2', instruction: 'Add Isotonic Saline (0.9% NaCl). Observe the normal biconcave shape.', targetElement: 'iso_drop', animation: 'drop' },
+      { id: 'step_3', instruction: 'Flush with Distilled Water (Hypotonic). Water rushes IN, swelling the cells.', targetElement: 'hypo_drop', animation: 'drop' },
+      { id: 'step_4', instruction: 'Flush with 10% NaCl (Hypertonic). Water rushes OUT, shriveling the cells (crenation).', targetElement: 'hyper_drop', animation: 'drop' }
+    ],
+    computeState: (actionState) => {
+      return {
+        hasSample: actionState >= 1,
+        solutionType: actionState >= 4 ? 'Hypertonic' : actionState >= 3 ? 'Hypotonic' : actionState >= 2 ? 'Isotonic' : 'None',
+        waterMovement: actionState >= 4 ? 'Net flow OUT' : actionState >= 3 ? 'Net flow IN' : actionState >= 2 ? 'Equilibrium' : '-',
+        cellState: actionState >= 4 ? 'shriveled' : actionState >= 3 ? 'swollen' : actionState >= 1 ? 'normal' : 'invisible',
+        isComplete: actionState >= 4
       };
     }
   }

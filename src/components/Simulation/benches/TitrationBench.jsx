@@ -24,20 +24,19 @@ const TitrationBench = ({
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
       <div className="relative z-10 w-full flex flex-col items-center justify-center">
-        <div className="flex justify-center items-end gap-8 md:gap-12 h-64 relative w-full max-w-lg">
+        
+        <div className="flex justify-center items-end gap-10 md:gap-14 h-[260px] relative w-full max-w-2xl mb-16">
           
-          <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-3/4 h-8 bg-black/20 rounded-[100%] blur-md z-0" />
+          <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[80%] h-10 bg-black/20 rounded-[100%] blur-md z-0" />
 
           {/* ── Burette ── */}
-          <div className="flex flex-col items-center z-10">
-            {/* Wrapper handles the unified hover, click, and pulse glow */}
+          <div className="flex flex-col items-center relative z-10">
             <div
               className={`flex flex-col items-center cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1 group ${
                 currentStep.targetElement === 'burette' && !showVolumeReading ? 'pulse-glow' : ''
               }`}
               onClick={() => handleElementClick('burette')}
             >
-              {/* Inner Glass Body (CHANGED to full 'border' to include the bottom line) */}
               <div
                 className={`
                   relative w-10 h-48
@@ -66,11 +65,11 @@ const TitrationBench = ({
               <div className="w-8 h-3.5 bg-gradient-to-b from-gray-300 to-gray-500 rounded shadow-md z-10 border border-white/40 transition-all duration-300 group-hover:brightness-110" />
               <div className="w-1.5 h-6 bg-gradient-to-b from-gray-200 to-white border-x border-gray-400 z-10 transition-all duration-300 group-hover:brightness-110" />
             </div>
-            <p className="text-xs text-white/90 mt-3 font-semibold tracking-wide bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md cursor-default pointer-events-none">Burette</p>
+            <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Burette</span>
           </div>
 
           {/* ── Beaker ── */}
-          <div className="flex flex-col items-center z-10">
+          <div className="flex flex-col items-center relative z-10">
             <div className="relative group">
               <div
                 className={`
@@ -93,25 +92,30 @@ const TitrationBench = ({
               </div>
               {showDrop && <div className="drop-animation z-30" style={{ top: '-24px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#60a5fa', boxShadow: '0 0 8px #60a5fa' }} />}
             </div>
-            <p className="text-xs text-white/90 mt-4 font-semibold tracking-wide bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md cursor-default pointer-events-none">Beaker</p>
+            <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Beaker</span>
           </div>
 
           {/* ── Indicator bottle ── */}
-          {currentStep.targetElement === 'indicator' && (
-            <div className="flex flex-col items-center animate-fade-in-up absolute right-0 bottom-8 z-20 group">
-              <div className="relative w-12 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg shadow-lg cursor-pointer pulse-glow flex flex-col items-center justify-end pb-1.5 border border-purple-300/50 transition-transform duration-300 hover:-translate-y-2" onClick={() => handleElementClick('indicator')}>
-                <div className="absolute -top-2 w-6 h-3 bg-gray-900 rounded border border-gray-700" />
-                <div className="w-10 h-8 bg-white/30 backdrop-blur-sm rounded mb-1 border border-white/50 flex items-center justify-center shadow-inner">
-                  <span className="text-[10px] text-white font-bold tracking-wide">PhPh</span>
-                </div>
+          <div className="flex flex-col items-center relative z-10">
+            <div 
+              className={`relative w-12 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg shadow-lg flex flex-col items-center justify-end pb-1.5 border border-purple-300/50 transition-all duration-300 ${
+                currentStep.targetElement === 'indicator' ? 'cursor-pointer pulse-glow hover:-translate-y-2' : 'opacity-90'
+              }`} 
+              onClick={() => handleElementClick('indicator')}
+            >
+              <div className="absolute -top-2 w-6 h-3 bg-gray-900 rounded border border-gray-700" />
+              <div className="w-10 h-8 bg-white/30 backdrop-blur-sm rounded mb-1 border border-white/50 flex items-center justify-center shadow-inner">
+                <span className="text-[10px] text-white font-bold tracking-wide">PhPh</span>
               </div>
-              <p className="text-xs text-white/90 mt-2 font-semibold bg-black/30 border border-white/10 px-3 py-1 rounded-full shadow-md cursor-default pointer-events-none">Indicator</p>
             </div>
-          )}
+            <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Indicator</span>
+          </div>
+
         </div>
 
         {/* ── pH colour bar ── */}
-        <div className="mt-12 px-8 w-full max-w-lg">
+        {/* ADDED: mt-12 creates a clean, 48px gap between the labels and the pH interface */}
+        <div className="mt-12 px-8 w-full max-w-lg z-10 relative">
           <div className="flex justify-between text-xs text-white/90 font-bold mb-2 uppercase tracking-widest">
             <span>Acid (0)</span><span>Neutral (7)</span><span>Base (14)</span>
           </div>

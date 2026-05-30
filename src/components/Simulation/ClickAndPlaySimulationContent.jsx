@@ -1,13 +1,17 @@
 import React, { useState, useCallback } from 'react';
-import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom } from 'lucide-react';
+import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom, Zap, Wind, Microscope, Waves } from 'lucide-react';
 import TitrationBench from './benches/TitrationBench';
 import FlameTestBench from './benches/FlameTestBench';
 import CrystalGrowthBench from './benches/CrystalGrowthBench';
+import ElectrolysisBench from './benches/ElectrolysisBench';
+import OsmosisBench from './benches/OsmosisBench';
 
 const BenchComponentsMap = {
   TitrationBench: TitrationBench,
   FlameTestBench: FlameTestBench,
   CrystalGrowthBench: CrystalGrowthBench,
+  ElectrolysisBench: ElectrolysisBench,
+  OsmosisBench: OsmosisBench,
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -129,6 +133,48 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
                   <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Atom size={16} className="text-purple-400 flex-shrink-0" /> Crystal Status</span>
                   <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.crystalState === 'grown' ? 'text-green-400' : 'text-amber-300'}`}>
                     {simState.crystalState || 'None'}
+                  </span>
+                </div>
+              </>
+            ) : experimentId === 'electrolysis_of_water' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Zap size={16} className="text-yellow-400 flex-shrink-0" /> DC Power</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.powerOn ? 'text-green-400' : 'text-gray-400'}`}>
+                    {simState.powerOn ? '9.0V (0.5A)' : 'OFF'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Wind size={16} className="text-gray-300 flex-shrink-0" /> Cathode (H₂)</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner`}>
+                    {simState.h2Volume.toFixed(1)} mL
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Wind size={16} className="text-red-300 flex-shrink-0" /> Anode (O₂)</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-amber-300 font-bold ml-auto shadow-inner`}>
+                    {simState.o2Volume.toFixed(1)} mL
+                  </span>
+                </div>
+              </>
+            ) : experimentId === 'osmosis_in_cells' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-blue-400 flex-shrink-0" /> Solution</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.solutionType === 'Hypertonic' ? 'text-blue-400' : simState.solutionType === 'Hypotonic' ? 'text-cyan-300' : 'text-gray-300'}`}>
+                    {simState.solutionType}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Waves size={16} className="text-teal-400 flex-shrink-0" /> Water Flow</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-white font-bold ml-auto shadow-inner uppercase`}>
+                    {simState.waterMovement}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Microscope size={16} className="text-purple-400 flex-shrink-0" /> Cell Condition</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.cellState === 'normal' ? 'text-green-400' : simState.cellState === 'invisible' ? 'text-gray-500' : 'text-amber-400'}`}>
+                    {simState.cellState}
                   </span>
                 </div>
               </>

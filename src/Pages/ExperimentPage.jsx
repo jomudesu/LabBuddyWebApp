@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react'; // <-- ADDED Loader2 here
 import { useExperiments } from '../backend/Firebase/useExperiments';
 import { useProgress } from '../backend/Firebase/useProgress';
 import { simulationConfigs } from '../config/simulation';
@@ -22,11 +22,26 @@ const ExperimentPage = () => {
     }
   }, [id, experiments, loading]);
 
-  // Updated Loading Screen Background
-  if (loading) return <div className="p-8 text-center text-white min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900">Loading experiment...</div>;
+  // RESTORED: Beautiful Animated Loading Screen
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 flex flex-col items-center justify-center text-white">
+      <Loader2 className="w-12 h-12 text-blue-400 animate-spin mb-4" />
+      <h2 className="text-xl font-semibold tracking-wide animate-pulse">Loading Laboratory...</h2>
+    </div>
+  );
   
-  // Updated Not Found Screen Background
-  if (!experiment) return <div className="p-8 text-center text-red-300 min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900">Experiment not found.</div>;
+  // RESTORED: Glassmorphism Not Found Screen
+  if (!experiment) return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 flex flex-col items-center justify-center text-white">
+      <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-2xl backdrop-blur-md flex flex-col items-center shadow-xl">
+        <h2 className="text-2xl font-bold text-red-400 mb-2">Experiment Not Found</h2>
+        <p className="text-red-200/80 mb-6">The simulation you are looking for does not exist.</p>
+        <button onClick={() => navigate('/experiments')} className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-semibold">
+          Go Back
+        </button>
+      </div>
+    </div>
+  );
 
   const handleComplete = async () => {
     await updateExperimentStatus(id, 'completed');
@@ -34,7 +49,7 @@ const ExperimentPage = () => {
   };
 
   return (
-    // NEW: Soothing, neutral slate-blue background to reduce eye strain
+    // Soothing, neutral slate-blue background to reduce eye strain
     <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 transition-colors duration-500">
       
       {/* Custom top bar - Glassmorphism theme */}
