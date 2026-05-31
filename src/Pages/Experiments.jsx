@@ -157,7 +157,7 @@ const Experiments = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Category Filter */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><LayoutGrid size={16} className="text-blue-500"/> Category</label>
+              <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><LayoutGrid size={16} className="text-blue-500"/> Category</label>
               <select 
                 value={filters.category} 
                 onChange={(e) => setFilters({...filters, category: e.target.value})}
@@ -169,7 +169,7 @@ const Experiments = () => {
 
             {/* Difficulty Filter */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><BarChart2 size={16} className="text-blue-500"/> Difficulty</label>
+              <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><BarChart2 size={16} className="text-blue-500"/> Difficulty</label>
               <select 
                 value={filters.difficulty} 
                 onChange={(e) => setFilters({...filters, difficulty: e.target.value})}
@@ -181,7 +181,7 @@ const Experiments = () => {
 
             {/* Sorting */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><ArrowDownAZ size={16} className="text-blue-500"/> Sort Order</label>
+              <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><ArrowDownAZ size={16} className="text-blue-500"/> Sort Order</label>
               <select 
                 value={filters.sortBy} 
                 onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
