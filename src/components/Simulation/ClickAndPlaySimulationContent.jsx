@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom, Zap, Wind, Microscope, Waves, Timer, Palette, Pipette, Activity, Layers } from 'lucide-react';
+import { CheckCircle, Thermometer, Droplet, FlaskConical, Atom, Zap, Wind, Microscope, Waves, Timer, Palette, Pipette, Activity, Layers, LineChart } from 'lucide-react';
+
 import TitrationBench from './benches/TitrationBench';
 import FlameTestBench from './benches/FlameTestBench';
 import CrystalGrowthBench from './benches/CrystalGrowthBench';
@@ -7,6 +8,7 @@ import ElectrolysisBench from './benches/ElectrolysisBench';
 import OsmosisBench from './benches/OsmosisBench';
 import ChromatographyBench from './benches/ChromatographyBench';
 import PHScaleBench from './benches/PHScaleBench';
+import TitrationCurveBench from './benches/TitrationCurveBench'; // <-- NEW
 
 const BenchComponentsMap = {
   TitrationBench: TitrationBench,
@@ -16,6 +18,7 @@ const BenchComponentsMap = {
   OsmosisBench: OsmosisBench,
   ChromatographyBench: ChromatographyBench,
   PHScaleBench: PHScaleBench,
+  TitrationCurveBench: TitrationCurveBench, // <-- NEW
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -26,8 +29,7 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedStepIds, setCompletedStepIds] = useState(new Set());
   const [animating, setAnimating] = useState(false);
-
-  // Titration specific states
+  const [interactiveData, setInteractiveData] = useState(null);
   const [addedVolume, setAddedVolume] = useState(0);   
   const [hasIndicator, setHasIndicator] = useState(false);
   const [showDrop, setShowDrop] = useState(false);
@@ -35,9 +37,14 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
   const [buretteFilled, setBuretteFilled] = useState(false);
 
   // UNIVERSAL STATE COMPUTATION
-  const simState = experimentId === 'acid_base_titration' 
-    ? config.computeState(addedVolume, config)
+  // We pass BOTH addedVolume and completedStepIds.size so individual configs can extract what they need!
+  const simState = (experimentId === 'acid_base_titration' || experimentId === 'titration_curves') 
+    ? config.computeState(addedVolume, config, completedStepIds.size)
     : config.computeState(completedStepIds.size, config);
+
+  const currentPH = interactiveData && interactiveData.activePH !== undefined ? interactiveData.activePH : simState.activePH;
+  const phSample = currentPH === 2.5 ? 'Lemon Juice' : currentPH === 7 ? 'Distilled H₂O' : currentPH === 11 ? 'Ammonia' : 'None';
+  const phClass = currentPH === 2.5 ? 'Strong Acid' : currentPH === 7 ? 'Neutral' : currentPH === 11 ? 'Strong Base' : '-';
 
   const currentStep = steps[currentStepIndex];
   const allStepsDone = steps.every((s) => completedStepIds.has(s.id));
@@ -56,21 +63,19 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
     setAnimating(true);
 
     switch (currentStep.animation) {
-      // Titration Specific Animations
       case 'fill':
         setBuretteFilled(true); await delay(700); markComplete(currentStep.id); advanceStep(); break;
       case 'drop':
         setShowDrop(true); setTimeout(() => setShowDrop(false), 500); setHasIndicator(true); await delay(700); markComplete(currentStep.id); advanceStep(); break;
       case 'pour':
-        setShowDrop(true); setTimeout(() => setShowDrop(false), 500); setAddedVolume(addedVolume + mlPerClick); 
-        const newState = config.computeState(addedVolume + mlPerClick, config); 
+        setShowDrop(true); setTimeout(() => setShowDrop(false), 500); 
+        setAddedVolume(addedVolume + mlPerClick); 
+        const newState = config.computeState(addedVolume + mlPerClick, config, completedStepIds.size); 
         await delay(700); 
         if (newState.isComplete) { markComplete(currentStep.id); advanceStep(); } 
         break;
       case 'none':
         setShowVolumeReading(true); await delay(900); setShowVolumeReading(false); markComplete(currentStep.id); break;
-      
-      // UNIVERSAL ANIMATION HANDLER
       default:
         await delay(700); 
         markComplete(currentStep.id); 
@@ -81,7 +86,7 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
   };
 
   const getStepInstruction = (step, isActive) => {
-    if (isActive && step.repeatable) return `${step.instruction} (~${Math.max(0, config.totalNeeded - addedVolume).toFixed(0)} mL to equivalence point)`;
+    if (isActive && step.repeatable) return `${step.instruction} (${addedVolume} mL added)`;
     return step.instruction;
   };
 
@@ -207,19 +212,40 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
                 <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
                   <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Pipette size={16} className="text-pink-400 flex-shrink-0" /> Active Sample</span>
                   <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase text-cyan-300">
-                    {simState.activePH === 2.5 ? 'Lemon Juice' : simState.activePH === 7 ? 'Distilled H₂O' : simState.activePH === 11 ? 'Ammonia' : 'None'}
+                    {phSample}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
                   <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Activity size={16} className="text-yellow-400 flex-shrink-0" /> pH Reading</span>
-                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-white font-bold ml-auto shadow-inner uppercase ${simState.activePH < 7 ? 'text-red-400' : simState.activePH > 7 ? 'text-indigo-400' : simState.activePH === 7 ? 'text-green-400' : ''}`}>
-                    {simState.activePH ? simState.activePH.toFixed(1) : '-'}
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-white font-bold ml-auto shadow-inner uppercase ${currentPH !== null && currentPH < 7 ? 'text-red-400' : currentPH > 7 ? 'text-indigo-400' : currentPH === 7 ? 'text-green-400' : ''}`}>
+                    {currentPH !== null ? currentPH.toFixed(1) : '-'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
                   <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Layers size={16} className="text-blue-400 flex-shrink-0" /> Class</span>
                   <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase text-gray-300`}>
-                    {simState.activeClassification}
+                    {phClass}
+                  </span>
+                </div>
+              </>
+            ) : experimentId === 'titration_curves' ? (
+              <>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-blue-400 flex-shrink-0" /> Titrant Vol</span>
+                  <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner text-cyan-300">
+                    {simState.volumeAdded?.toFixed(1)} mL
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Activity size={16} className="text-yellow-400 flex-shrink-0" /> pH Reading</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-white font-bold ml-auto shadow-inner ${simState.pH < 7 ? 'text-red-400' : simState.pH > 7 ? 'text-indigo-400' : 'text-green-400'}`}>
+                    {simState.pH?.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                  <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><LineChart size={16} className="text-pink-400 flex-shrink-0" /> Curve Phase</span>
+                  <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner uppercase ${simState.curvePhase === 'Equivalence Point' ? 'text-green-400' : 'text-gray-300'}`}>
+                    {simState.curvePhase}
                   </span>
                 </div>
               </>
@@ -272,6 +298,8 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
             uiState={uiState}
             currentStep={currentStep}
             handleElementClick={handleElementClick}
+            interactiveData={interactiveData}
+            setInteractiveData={setInteractiveData}
           >
             {allStepsDone && (
               <div className="mt-8 flex justify-center animate-fade-in-up z-20">

@@ -229,6 +229,48 @@ export const simulationConfigs = {
       };
     }
   },
+
+  titration_curves: {
+    id: 'titration_curves',
+    title: 'Titration Curves',
+    benchComponent: 'TitrationCurveBench',
+    equipment: ['Burette (0.1M NaOH)', 'Beaker (25mL 0.1M HCl)', 'pH Probe', 'Magnetic Stirrer', 'Data Logger'],
+    mlPerClick: 5,
+    totalNeeded: 50,
+    steps: [
+      { id: 'step_1', instruction: 'Place the beaker of 0.1M HCl onto the magnetic stirrer.', targetElement: 'beaker', animation: 'place' },
+      { id: 'step_2', instruction: 'Lower the digital pH probe into the acid solution.', targetElement: 'probe', animation: 'lower' },
+      { id: 'step_3', instruction: 'Open the burette to add NaOH in 5mL increments. Observe the plotted curve.', targetElement: 'burette', animation: 'pour', repeatable: true }
+    ],
+    // Custom compute state that calculates logarithmic pH and tracks the volume
+    computeState: (volume, config, stepCount = 0) => {
+      let pH = 1.0;
+      if (volume < 25) {
+        pH = -Math.log10(((25 * 0.1) - (volume * 0.1)) / (25 + volume));
+      } else if (volume === 25) {
+        pH = 7.0;
+      } else {
+        const pOH = -Math.log10(((volume * 0.1) - (25 * 0.1)) / (25 + volume));
+        pH = 14 - pOH;
+      }
+      
+      const safePH = Math.max(0, Math.min(14, pH));
+
+      let curvePhase = 'Initial Acid';
+      if (volume > 5 && volume < 25) curvePhase = 'Gradual Rise';
+      else if (volume === 25) curvePhase = 'Equivalence Point';
+      else if (volume > 25) curvePhase = 'Alkaline Plateau';
+      
+      return {
+        pH: safePH,
+        volumeAdded: volume,
+        beakerPlaced: stepCount >= 1,
+        probeLowered: stepCount >= 2,
+        curvePhase: curvePhase,
+        isComplete: volume >= 50
+      };
+    }
+  }
 };
 
 

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 const PHScaleBench = ({ 
   simState, 
   uiState,
   currentStep, 
   handleElementClick,
+  interactiveData,
+  setInteractiveData,
   children 
 }) => {
   const { papersPlaced, lemonTested, waterTested, ammoniaTested, activePH, isComplete } = simState;
@@ -13,21 +15,18 @@ const PHScaleBench = ({
   const target = currentStep?.targetElement;
   const isTarget = (id) => target === id && !isComplete;
 
-  // Local interactive state to allow clicking watch glasses after they are tested
-  const [displayPH, setDisplayPH] = useState(null);
-
-  // Automatically sync the local display with the engine's active step during the experiment
   useEffect(() => {
-    if (activePH !== null) {
-      setDisplayPH(activePH);
+    if (setInteractiveData) {
+      setInteractiveData(null);
     }
-  }, [activePH]);
+  }, [activePH, setInteractiveData]);
+
+  const displayPH = interactiveData?.activePH !== undefined ? interactiveData.activePH : activePH;
 
   return (
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 flex flex-col justify-center relative overflow-hidden h-full min-h-[500px]">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
-      {/* Embedded CSS for the falling droplet and splashing absorption */}
       <style>{`
         @keyframes droplet-fall {
           0% { transform: translateY(0) scale(1); opacity: 1; }
@@ -38,7 +37,6 @@ const PHScaleBench = ({
 
       <div className="relative z-10 w-full flex flex-col items-center justify-center mt-2">
         
-        {/* Unified Baseline Layout */}
         <div className="flex justify-center items-end gap-8 md:gap-14 h-[240px] relative w-full max-w-4xl mb-16">
           
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[90%] h-10 bg-black/20 rounded-[100%] blur-md z-0" />
@@ -59,11 +57,10 @@ const PHScaleBench = ({
             <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Paper Stack</span>
           </div>
 
-          <div className="w-px h-24 bg-white/20 ml-2 mr-2" /> {/* Divider */}
+          <div className="w-px h-24 bg-white/20 ml-2 mr-2" /> 
 
           {/* 2. Lemon Juice Station */}
           <div className="flex flex-col items-center relative z-20 w-24">
-             {/* Dropper Bottle */}
              <div 
               className={`absolute -top-32 flex flex-col items-center transition-all duration-500 group origin-bottom-right z-30 ${isTarget('lemon_drop') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''} ${target === 'lemon_drop' && animating ? '-translate-y-4 -rotate-[25deg]' : ''}`}
               onClick={() => isTarget('lemon_drop') && handleElementClick('lemon_drop')}
@@ -73,7 +70,6 @@ const PHScaleBench = ({
               <div className="w-10 h-12 bg-white/30 backdrop-blur-md rounded-b-lg border border-white/50 shadow-inner overflow-hidden relative">
                  <div className="absolute bottom-0 w-full h-[60%] bg-yellow-200/60 border-t border-yellow-100/50" />
               </div>
-              {/* Droplet Animation */}
               {target === 'lemon_drop' && animating && (
                 <div className="absolute -bottom-2 -left-2 w-2 h-3 bg-yellow-200 rounded-full blur-[1px]" style={{ animation: 'droplet-fall 0.7s ease-in forwards' }} />
               )}
@@ -81,12 +77,11 @@ const PHScaleBench = ({
 
             <div 
               className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${lemonTested ? 'cursor-pointer hover:-translate-y-1' : ''}`}
-              onClick={() => lemonTested && setDisplayPH(2.5)}
+              onClick={() => lemonTested && setInteractiveData?.({ activePH: 2.5 })}
             >
-               {/* CHANGED: Appended 'isComplete ? pulse-glow' so it highlights dynamically after the experiment ends */}
-               <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
+               <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] rounded-t-none border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
                  displayPH === 2.5 ? 'shadow-[0_0_20px_rgba(255,255,255,0.7)] ring-2 ring-white/80' : 'shadow-lg'
-               } ${isComplete ? 'pulse-glow' : ''}`}>
+               } ${isComplete && displayPH !== 2.5 ? 'pulse-glow !rounded-b-[50%] !rounded-t-none' : ''}`}>
                  <div className={`w-14 h-3 rounded-sm shadow-sm transition-all duration-1000 ease-in-out border border-black/10 ${papersPlaced ? 'scale-100 opacity-100' : 'scale-0 opacity-0'} ${lemonTested ? 'bg-red-500' : 'bg-yellow-300'}`} />
                </div>
             </div>
@@ -95,7 +90,6 @@ const PHScaleBench = ({
 
           {/* 3. Distilled Water Station */}
           <div className="flex flex-col items-center relative z-20 w-24">
-             {/* Dropper Bottle */}
              <div 
               className={`absolute -top-32 flex flex-col items-center transition-all duration-500 group origin-bottom-right z-30 ${isTarget('water_drop') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''} ${target === 'water_drop' && animating ? '-translate-y-4 -rotate-[25deg]' : ''}`}
               onClick={() => isTarget('water_drop') && handleElementClick('water_drop')}
@@ -105,7 +99,6 @@ const PHScaleBench = ({
               <div className="w-10 h-12 bg-white/30 backdrop-blur-md rounded-b-lg border border-white/50 shadow-inner overflow-hidden relative">
                  <div className="absolute bottom-0 w-full h-[60%] bg-cyan-200/40 border-t border-cyan-100/50" />
               </div>
-              {/* Droplet Animation */}
               {target === 'water_drop' && animating && (
                 <div className="absolute -bottom-2 -left-2 w-2 h-3 bg-cyan-200 rounded-full blur-[1px]" style={{ animation: 'droplet-fall 0.7s ease-in forwards' }} />
               )}
@@ -113,12 +106,11 @@ const PHScaleBench = ({
 
             <div 
               className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${waterTested ? 'cursor-pointer hover:-translate-y-1' : ''}`}
-              onClick={() => waterTested && setDisplayPH(7)}
+              onClick={() => waterTested && setInteractiveData?.({ activePH: 7 })}
             >
-               {/* CHANGED: Appended 'isComplete ? pulse-glow' so it highlights dynamically after the experiment ends */}
-               <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
+               <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] rounded-t-none border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
                  displayPH === 7 ? 'shadow-[0_0_20px_rgba(255,255,255,0.7)] ring-2 ring-white/80' : 'shadow-lg'
-               } ${isComplete ? 'pulse-glow' : ''}`}>
+               } ${isComplete && displayPH !== 7 ? 'pulse-glow !rounded-b-[50%] !rounded-t-none' : ''}`}>
                  <div className={`w-14 h-3 rounded-sm shadow-sm transition-all duration-1000 ease-in-out border border-black/10 ${papersPlaced ? 'scale-100 opacity-100' : 'scale-0 opacity-0'} ${waterTested ? 'bg-green-500' : 'bg-yellow-300'}`} />
                </div>
             </div>
@@ -127,7 +119,6 @@ const PHScaleBench = ({
 
           {/* 4. Ammonia Station */}
           <div className="flex flex-col items-center relative z-20 w-24">
-             {/* Dropper Bottle */}
              <div 
               className={`absolute -top-32 flex flex-col items-center transition-all duration-500 group origin-bottom-right z-30 ${isTarget('ammonia_drop') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''} ${target === 'ammonia_drop' && animating ? '-translate-y-4 -rotate-[25deg]' : ''}`}
               onClick={() => isTarget('ammonia_drop') && handleElementClick('ammonia_drop')}
@@ -137,7 +128,6 @@ const PHScaleBench = ({
               <div className="w-10 h-12 bg-white/30 backdrop-blur-md rounded-b-lg border border-white/50 shadow-inner overflow-hidden relative">
                  <div className="absolute bottom-0 w-full h-[60%] bg-indigo-200/40 border-t border-indigo-100/50" />
               </div>
-              {/* Droplet Animation */}
               {target === 'ammonia_drop' && animating && (
                 <div className="absolute -bottom-2 -left-2 w-2 h-3 bg-indigo-200/80 rounded-full blur-[1px]" style={{ animation: 'droplet-fall 0.7s ease-in forwards' }} />
               )}
@@ -145,12 +135,11 @@ const PHScaleBench = ({
 
             <div 
               className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${ammoniaTested ? 'cursor-pointer hover:-translate-y-1' : ''}`}
-              onClick={() => ammoniaTested && setDisplayPH(11)}
+              onClick={() => ammoniaTested && setInteractiveData?.({ activePH: 11 })}
             >
-               {/* CHANGED: Appended 'isComplete ? pulse-glow' so it highlights dynamically after the experiment ends */}
-               <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
+               <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] rounded-t-none border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
                  displayPH === 11 ? 'shadow-[0_0_20px_rgba(255,255,255,0.7)] ring-2 ring-white/80' : 'shadow-lg'
-               } ${isComplete ? 'pulse-glow' : ''}`}>
+               } ${isComplete && displayPH !== 11 ? 'pulse-glow !rounded-b-[50%] !rounded-t-none' : ''}`}>
                  <div className={`w-14 h-3 rounded-sm shadow-sm transition-all duration-1000 ease-in-out border border-black/10 ${papersPlaced ? 'scale-100 opacity-100' : 'scale-0 opacity-0'} ${ammoniaTested ? 'bg-indigo-700' : 'bg-yellow-300'}`} />
                </div>
             </div>
