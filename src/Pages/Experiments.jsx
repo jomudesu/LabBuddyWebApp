@@ -1,13 +1,18 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FlaskRound as Flask, Search, Filter, X, ArrowDownAZ, LayoutGrid, BarChart2 } from 'lucide-react';
 import { useExperiments } from '../backend/Firebase/useExperiments';
 import { useProgress } from '../backend/Firebase/useProgress';
 
 const Experiments = () => {
   const navigate = useNavigate();
+  // FIXED: Added useLocation to intercept passed state
+  const location = useLocation();
   const { experiments, loading, error } = useExperiments();
   const { getStatus, updateExperimentStatus } = useProgress();
+
+  // Extract the target ID sent from QuickLinks (if any)
+  const highlightExpId = location.state?.highlightExpId;
 
   // ─── STATE MANAGEMENT FOR CONTROLS ───
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,11 +20,9 @@ const Experiments = () => {
   const [filters, setFilters] = useState({
     category: 'All',
     difficulty: 'All',
-    sortBy: 'default' // 'default', 'a-z', 'z-a'
+    sortBy: 'default'
   });
 
-  // ─── DYNAMIC DATA EXTRACTION ───
-  // Automatically grab unique categories and difficulties from the database
   const categories = useMemo(() => ['All', ...new Set(experiments?.map(e => e.category) || [])], [experiments]);
   const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
@@ -43,7 +46,19 @@ const Experiments = () => {
     return result;
   }, [experiments, searchQuery, filters]);
 
-  // Helper to colorize difficulty badges
+  // FIXED: If we receive a highlight ID, automatically scroll down to perfectly center it!
+  useEffect(() => {
+    if (highlightExpId && processedExperiments.length > 0) {
+      // Small timeout ensures the grid has fully rendered before calculating the scroll position
+      setTimeout(() => {
+        const targetElement = document.getElementById(`exp-card-${highlightExpId}`);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [highlightExpId, processedExperiments]);
+
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
       case 'beginner': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
@@ -58,7 +73,6 @@ const Experiments = () => {
     setSearchQuery('');
   };
 
-  // ─── INTERACTION HANDLERS ───
   const handleStart = async (exp) => {
     await updateExperimentStatus(exp.id, 'in_progress');
     navigate(`/experiment/${exp.id}`);
@@ -108,10 +122,10 @@ const Experiments = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Experiment Hub</h1>
+        <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Laboratory Hub</h1>
       </div>
 
-      {/* ─── CONTROL BAR (Search & Main Filter Button) ─── */}
+      {/* ─── CONTROL BAR ─── */}
       <div className="flex flex-col md:flex-row gap-4 mb-4 z-20 relative">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
@@ -155,9 +169,8 @@ const Experiments = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Category Filter */}
             <div>
-              <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><LayoutGrid size={16} className="text-blue-500"/> Category</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><LayoutGrid size={16} className="text-blue-500"/> Category</label>
               <select 
                 value={filters.category} 
                 onChange={(e) => setFilters({...filters, category: e.target.value})}
@@ -166,10 +179,8 @@ const Experiments = () => {
                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
-
-            {/* Difficulty Filter */}
             <div>
-              <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><BarChart2 size={16} className="text-blue-500"/> Difficulty</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><BarChart2 size={16} className="text-blue-500"/> Difficulty</label>
               <select 
                 value={filters.difficulty} 
                 onChange={(e) => setFilters({...filters, difficulty: e.target.value})}
@@ -178,10 +189,8 @@ const Experiments = () => {
                 {difficulties.map(diff => <option key={diff} value={diff}>{diff}</option>)}
               </select>
             </div>
-
-            {/* Sorting */}
             <div>
-              <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><ArrowDownAZ size={16} className="text-blue-500"/> Sort Order</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><ArrowDownAZ size={16} className="text-blue-500"/> Sort Order</label>
               <select 
                 value={filters.sortBy} 
                 onChange={(e) => setFilters({...filters, sortBy: e.target.value})}
@@ -196,7 +205,6 @@ const Experiments = () => {
         </div>
       </div>
 
-      {/* ─── EMPTY STATE HANDLER ─── */}
       {processedExperiments.length === 0 && (
         <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
           <Flask className="mx-auto text-gray-300 mb-4" size={48} />
@@ -210,16 +218,21 @@ const Experiments = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {processedExperiments.map(exp => {
           const status = getStatus(exp.id);
+          const isHighlighted = exp.id === highlightExpId; // Check if this is the targeted card
+
           return (
             <div 
               key={exp.id} 
-              // ✨ Catchy Interactive Hover Applied Here ✨
-              className="group bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-2 hover:border-blue-300 transition-all duration-300 flex flex-col relative overflow-hidden cursor-default"
+              id={`exp-card-${exp.id}`}
+              // FIXED: Apply dynamic styling. If highlighted, add a glowing blue ring and slightly scale it up!
+              className={`group bg-white rounded-2xl p-6 transition-all duration-500 flex flex-col relative overflow-hidden cursor-default
+                ${isHighlighted 
+                  ? 'ring-4 ring-blue-500 ring-offset-2 shadow-[0_0_25px_rgba(59,130,246,0.6)] scale-[1.02] z-10 border-transparent' 
+                  : 'shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-2 hover:border-blue-300'}
+              `}
             >
-              {/* Subtle hover background glow */}
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               
-              {/* Top Row: Icon & Status */}
               <div className="flex justify-between items-start mb-4 relative z-10">
                 <div className="bg-blue-50 p-3.5 rounded-xl w-fit transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-blue-100 group-hover:shadow-md">
                   <Flask className="text-blue-600" size={24} />
@@ -231,13 +244,11 @@ const Experiments = () => {
                 </div>
               </div>
 
-              {/* Title & Category */}
               <div className="relative z-10 flex-1">
                 <h3 className="text-xl font-bold text-gray-800 leading-tight group-hover:text-blue-900 transition-colors">{exp.title}</h3>
                 <p className="text-sm font-medium text-blue-600/80 mt-1">{exp.category}</p>
               </div>
 
-              {/* Tags Container */}
               <div className="flex items-center justify-between mt-6 mb-5 relative z-10">
                 <div className="flex gap-2">
                   <span className={`text-[11px] font-bold px-3 py-1.5 rounded-md border shadow-sm ${getDifficultyColor(exp.difficulty)}`}>
@@ -246,7 +257,6 @@ const Experiments = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="mt-auto flex gap-3 relative z-10">
                 {status !== 'completed' && (
                   <button onClick={() => handleStart(exp)} className="flex-1 bg-gray-900 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">

@@ -7,6 +7,7 @@ import {
   ChevronRight, 
   Beaker,
   AlertCircle,
+  Link
 } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { useExperiments } from '../../backend/Firebase/useExperiments';
@@ -24,7 +25,6 @@ const QuickLinks = () => {
   const [randomExperiments, setRandomExperiments] = useState([]);
   const { experiments, loading } = useExperiments();
 
-  // When modal opens, pick 3 random experiments
   useEffect(() => {
     if (activeModal === 'beginExperiment' && experiments.length > 0 && !loading) {
       const shuffled = [...experiments];
@@ -36,13 +36,16 @@ const QuickLinks = () => {
     }
   }, [activeModal, experiments, loading]);
 
-  // Helper to get color class based on difficulty
-  const getDifficultyColor = (difficulty) => {
-    switch(difficulty) {
-      case 'Beginner': return 'green';
-      case 'Intermediate': return 'blue';
-      case 'Advanced': return 'purple';
-      default: return 'gray';
+  const getDifficultyStyles = (difficulty) => {
+    switch(difficulty?.toLowerCase()) {
+      case 'beginner': 
+        return { iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+      case 'intermediate': 
+        return { iconBg: 'bg-amber-100', iconColor: 'text-amber-600', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'advanced': 
+        return { iconBg: 'bg-rose-100', iconColor: 'text-rose-600', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+      default: 
+        return { iconBg: 'bg-gray-100', iconColor: 'text-gray-600', badge: 'bg-gray-50 text-gray-700 border-gray-200' };
     }
   };
 
@@ -59,31 +62,31 @@ const QuickLinks = () => {
           ) : (
             <div className="space-y-3">
               {randomExperiments.map((exp) => {
-                const color = getDifficultyColor(exp.difficulty);
+                const styles = getDifficultyStyles(exp.difficulty);
                 return (
                   <div 
                     key={exp.id}
                     onClick={() => {
                       setActiveModal(null);
-                      navigate('/experiments');
+                      navigate('/experiments', { state: { highlightExpId: exp.id } });
                     }}
-                    className="flex items-start p-3 border rounded-xl hover:shadow-md transition cursor-pointer group"
+                    className="flex items-start p-3 border rounded-xl hover:shadow-md hover:-translate-y-1 hover:border-blue-300 transition-all duration-300 cursor-pointer group bg-white"
                   >
-                    <div className={`w-10 h-10 bg-${color}-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0`}>
-                      <Beaker size={20} className={`text-${color}-600`} />
+                    <div className={`w-10 h-10 ${styles.iconBg} rounded-lg flex items-center justify-center mr-3 flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-sm`}>
+                      <Beaker size={20} className={`${styles.iconColor}`} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <p className="font-semibold text-gray-800 group-hover:text-blue-600">{exp.title}</p>
-                        <div className="flex gap-2 text-xs text-gray-500">
-                          <span>{exp.difficulty}</span>
-                          <span>•</span>
-                          <span>{exp.duration} min</span>
+                        <p className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{exp.title}</p>
+                        <div className="flex gap-2 text-[10px] sm:text-xs text-gray-500">
+                          <span className={`px-2.5 py-0.5 rounded-md border font-bold ${styles.badge}`}>
+                            {exp.difficulty?.toUpperCase()}
+                          </span>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{exp.description}</p>
+                      <p className="text-xs text-gray-500 mt-1 font-medium">{exp.description}</p>
                     </div>
-                    <ChevronRight size={16} className="text-gray-400 ml-2 flex-shrink-0" />
+                    <ChevronRight size={18} className="text-gray-400 ml-2 flex-shrink-0 group-hover:text-blue-500 transition-transform duration-300 group-hover:translate-x-1" />
                   </div>
                 );
               })}
@@ -94,7 +97,7 @@ const QuickLinks = () => {
               setActiveModal(null);
               navigate('/experiments');
             }}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition mt-2"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-2 font-bold"
           >
             View All Experiments
           </button>
@@ -109,29 +112,29 @@ const QuickLinks = () => {
           <div className="space-y-3">
             {[
               { step: '1', title: 'Create an Account', desc: 'Sign up with your email to start your lab journey', icon: '📝' },
-              { step: '2', title: 'Browse Experiments', desc: 'Explore our library of virtual chemistry experiments', icon: '🔬' },
-              { step: '3', title: 'Start Experiment', desc: 'Click on any experiment to begin the interactive session', icon: '⚡' },
+              { step: '2', title: 'Browse Experiments', desc: 'Explore our library of virtual chemistry experiments', icon: '🔍' },
+              { step: '3', title: 'Start Experiment', desc: 'Click on any experiment to begin the interactive session', icon: '🧪' },
               { step: '4', title: 'Take Notes', desc: 'Record observations and save them for later review', icon: '📓' },
-              { step: '5', title: 'Track Progress', desc: 'Monitor your completion rate and revisit experiments', icon: '📊' }
+              { step: '5', title: 'Track Progress', desc: 'Monitor your completion rate and revisit experiments', icon: '📈' }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-start p-3 bg-gray-50 rounded-xl">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+              <div key={idx} className="flex items-start p-3.5 bg-gray-50 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all duration-300">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm">
                   <span className="text-blue-600 font-bold text-sm">{item.step}</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-800">{item.title}</p>
-                  <p className="text-sm text-gray-500">{item.desc}</p>
+                  <p className="font-bold text-gray-800">{item.title}</p>
+                  <p className="text-sm font-medium text-gray-500">{item.desc}</p>
                 </div>
                 <span className="ml-auto text-2xl">{item.icon}</span>
               </div>
             ))}
           </div>
-          <div className="bg-blue-50 rounded-xl p-4 mt-2">
+          <div className="bg-blue-50 rounded-xl p-4 mt-2 border border-blue-100 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
-              <AlertCircle size={16} className="text-blue-600" />
-              <p className="font-semibold text-blue-800 text-sm">Pro Tip</p>
+              <AlertCircle size={18} className="text-blue-600 animate-pulse" />
+              <p className="font-bold text-blue-800 text-sm">Pro Tip</p>
             </div>
-            <p className="text-blue-700 text-sm">Always read the safety guide before starting any experiment!</p>
+            <p className="text-blue-700 text-sm font-medium">Always read the safety guide before starting any experiment!</p>
           </div>
         </div>
       )
@@ -141,8 +144,8 @@ const QuickLinks = () => {
       title: 'Interactive Periodic Table',
       content: (
         <div className="space-y-4">
-          <p className="text-gray-600 text-sm">Click on any element to view its properties:</p>
-          <div className="grid grid-cols-8 gap-1 text-xs">
+          <p className="text-gray-600 font-medium text-sm">Click on any element to view its properties:</p>
+          <div className="grid grid-cols-8 gap-1.5 text-xs">
             {[
               'H', 'He',
               'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
@@ -152,22 +155,22 @@ const QuickLinks = () => {
               <button
                 key={idx}
                 onClick={() => alert(`${element}\n\nAtomic properties coming soon!`)}
-                className="p-2 bg-gray-100 rounded hover:bg-blue-100 hover:text-blue-700 transition text-center font-mono"
+                className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-300 text-center font-mono font-bold"
               >
                 {element}
               </button>
             ))}
           </div>
-          <div className="bg-purple-50 rounded-xl p-4 mt-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Atom size={16} className="text-purple-600" />
-              <p className="font-semibold text-purple-800 text-sm">Element Groups</p>
+          <div className="bg-purple-50 rounded-xl p-4 mt-2 border border-purple-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Atom size={18} className="text-purple-600" />
+              <p className="font-bold text-purple-800 text-sm">Element Groups</p>
             </div>
-            <div className="grid grid-cols-4 gap-2 text-xs">
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-400 rounded"></div><span>Alkali Metals</span></div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-orange-400 rounded"></div><span>Alkaline Earth</span></div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-400 rounded"></div><span>Transition Metals</span></div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-400 rounded"></div><span>Noble Gases</span></div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-semibold text-purple-900/80">
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-red-400 rounded shadow-sm"></div><span>Alkali Metals</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-orange-400 rounded shadow-sm"></div><span>Alkaline Earth</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-400 rounded shadow-sm"></div><span>Transition Metals</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-green-400 rounded shadow-sm"></div><span>Noble Gases</span></div>
             </div>
           </div>
           <button 
@@ -175,7 +178,7 @@ const QuickLinks = () => {
               setActiveModal(null);
               alert('Full interactive periodic table coming soon!');
             }}
-            className="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
+            className="w-full bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
           >
             Open Full Periodic Table
           </button>
@@ -185,26 +188,26 @@ const QuickLinks = () => {
   };
 
   const links = [
-    { icon: PlayCircle, title: 'Begin Experiment!', color: 'text-green-600', bg: 'bg-green-50', modalKey: 'beginExperiment' },
-    { icon: HelpCircle, title: 'How to', color: 'text-blue-600', bg: 'bg-blue-50', modalKey: 'howTo' },
-    { icon: Atom, title: 'Periodic Table', color: 'text-purple-600', bg: 'bg-purple-50', modalKey: 'periodicTable' },
+    { icon: PlayCircle, title: 'Begin Experiment!', color: 'text-green-600', bg: 'bg-green-100', modalKey: 'beginExperiment' },
+    { icon: HelpCircle, title: 'How to', color: 'text-blue-600', bg: 'bg-blue-100', modalKey: 'howTo' },
+    { icon: Atom, title: 'Periodic Table', color: 'text-purple-600', bg: 'bg-purple-100', modalKey: 'periodicTable' },
   ];
 
-  // --- Skeleton Loader Render ---
   if (pageLoading) {
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm animate-pulse">
-        <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="w-full flex items-center justify-between p-3 rounded-xl border border-transparent">
-              <div className="flex items-center w-full">
-                <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                <div className="ml-3 h-5 w-24 bg-gray-200 rounded"></div>
+      <div>
+        <div className="h-7 w-32 bg-gray-200 rounded animate-pulse mb-4"></div>
+        <div className="bg-white rounded-2xl p-6 shadow-sm animate-pulse">
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="w-full flex items-center justify-between p-4 rounded-xl border border-transparent">
+                <div className="flex items-center w-full">
+                  <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
+                  <div className="ml-4 h-5 w-24 bg-gray-200 rounded"></div>
+                </div>
               </div>
-              <div className="w-5 h-5 bg-gray-200 rounded"></div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -212,36 +215,40 @@ const QuickLinks = () => {
 
   return (
     <>
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Links</h3>
-        <div className="space-y-3">
-          {links.map((link, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveModal(link.modalKey)}
-              className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition group"
-            >
-              <div className="flex items-center">
-                <div className={`${link.bg} p-2 rounded-lg`}>
-                  <link.icon size={20} className={link.color} />
+      <div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          <Link className="mr-2 text-green-600" size={24} />
+          Quick Links
+        </h3>
+        
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="space-y-3">
+            {links.map((link, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveModal(link.modalKey)}
+                // ✨ Catchy Interactive Hover Applied Here ✨
+                className="w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 group border border-transparent hover:border-gray-200 hover:shadow-md hover:-translate-y-1 bg-gray-50/50 hover:bg-white relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                
+                <div className="flex items-center relative z-10">
+                  <div className={`${link.bg} p-2.5 rounded-xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-sm`}>
+                    <link.icon size={20} className={link.color} />
+                  </div>
+                  <span className="ml-4 text-gray-700 font-bold group-hover:text-blue-700 transition-colors">
+                    {link.title}
+                  </span>
                 </div>
-                <span className="ml-3 text-gray-700 group-hover:text-gray-900 font-medium">
-                  {link.title}
-                </span>
-              </div>
-              <ChevronRight size={18} className="text-gray-400 group-hover:text-gray-600" />
-            </button>
-          ))}
+                <ChevronRight size={18} className="text-gray-400 group-hover:text-blue-600 transition-transform duration-300 group-hover:translate-x-1 relative z-10" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {activeModal && modals[activeModal] && (
-        <Modal
-          isOpen={true}
-          onClose={() => setActiveModal(null)}
-          title={modals[activeModal].title}
-          size="lg"
-        >
+        <Modal isOpen={true} onClose={() => setActiveModal(null)} title={modals[activeModal].title} size="lg">
           {modals[activeModal].content}
         </Modal>
       )}
