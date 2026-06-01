@@ -23,7 +23,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 bg-white shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col border-r border-gray-100 z-50 relative">
+    <aside className="w-64 bg-slate-50/5 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col border-r border-gray-100 z-50 relative">
       {/* ─── Logo Section ─── */}
       <div className="p-7">
         <h1 className="text-2xl font-black text-blue-900 flex items-center tracking-tight cursor-default group">
@@ -44,8 +44,8 @@ const Sidebar = () => {
               flex items-center px-4 py-3.5 mb-2 rounded-xl transition-all duration-300 group relative overflow-hidden font-medium
               before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-blue-600 before:rounded-r-md before:transition-transform before:duration-300
               ${isActive 
-                ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100 font-bold before:scale-y-100' 
-                : 'text-gray-600 hover:bg-gray-50 border border-transparent hover:border-gray-200 hover:text-blue-600 hover:shadow-sm before:scale-y-0 group-hover:before:scale-y-100'
+                ? 'bg-blue-50/80 text-blue-700 shadow-sm border border-blue-100 font-bold before:scale-y-100' 
+                : 'text-gray-600 hover:bg-white border border-transparent hover:border-gray-200 hover:text-blue-600 hover:shadow-sm before:scale-y-0 group-hover:before:scale-y-100'
               }
             `}
           >
@@ -65,7 +65,8 @@ const Sidebar = () => {
       </nav>
 
       {/* ─── User Profile & Logout ─── */}
-      <div className="p-5 border-t border-gray-100 bg-gray-50/50">
+      {/* ✨ FIXED: Profile section now pure white to pop against the off-white sidebar ✨ */}
+      <div className="p-5 border-t border-gray-100 bg-white">
         
         {/* Profile Card */}
         <div className="flex items-center mb-4 group cursor-default">
@@ -85,7 +86,6 @@ const Sidebar = () => {
           onClick={handleLogout}
           className="group w-full flex items-center justify-center px-4 py-2.5 text-sm font-bold text-red-600 bg-transparent hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-300 border border-transparent hover:border-red-100 hover:shadow-sm"
         >
-          {/* Icon slides left slightly to emphasize "exiting" */}
           <LogOut size={18} className="mr-2 transition-transform duration-300 group-hover:-translate-x-1" />
           Sign Out
         </button>

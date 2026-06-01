@@ -13,13 +13,19 @@ import {
   Beaker,
   Clock,
   CheckCircle,
-  Eye
+  Eye,
+  Info
 } from 'lucide-react';
 import Modal from '../Common/Modal';
+import { useExperiments } from '../../backend/Firebase/useExperiments';
+import { useProgress } from '../../backend/Firebase/useProgress';
 
 const ActivityCards = () => {
   const navigate = useNavigate();
   
+  const { experiments } = useExperiments();
+  const { getStatus } = useProgress();
+
   const [pageLoading, setPageLoading] = useState(true);
   useEffect(() => {
     const timer = setTimeout(() => setPageLoading(false), 200);
@@ -29,6 +35,9 @@ const ActivityCards = () => {
   const [activeModal, setActiveModal] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
+  
+  // NEW: State for "Coming Soon" tool alerts
+  const [infoMessage, setInfoMessage] = useState('');
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -45,6 +54,23 @@ const ActivityCards = () => {
       }, 2000);
     }
   };
+
+  const userActivities = experiments
+    .filter(exp => {
+      const status = getStatus(exp.id);
+      return status === 'completed' || status === 'in_progress';
+    })
+    .map(exp => {
+      const status = getStatus(exp.id);
+      return {
+        id: exp.id,
+        action: status === 'completed' ? `Completed ${exp.title}` : `Started ${exp.title}`,
+        subtitle: exp.category,
+        status: status === 'completed' ? 'completed' : 'in-progress',
+        icon: status === 'completed' ? CheckCircle : Clock
+      };
+    })
+    .slice(0, 4);
 
   const modals = {
     attachFile: {
@@ -90,9 +116,10 @@ const ActivityCards = () => {
           <div className="grid grid-cols-2 gap-4">
             {[
               { name: 'Periodic Table', icon: Beaker, color: 'purple', action: () => navigate('/library') },
-              { name: 'Calculator', icon: Settings, color: 'blue', action: () => alert('Scientific calculator coming soon!') },
-              { name: 'Unit Converter', icon: Activity, color: 'green', action: () => alert('Unit converter coming soon!') },
-              { name: 'Lab Timer', icon: Clock, color: 'orange', action: () => alert('Lab timer coming soon!') }
+              // FIXED: Hooked up to the new infoMessage state!
+              { name: 'Calculator', icon: Settings, color: 'blue', action: () => setInfoMessage('Scientific calculator coming soon!') },
+              { name: 'Unit Converter', icon: Activity, color: 'green', action: () => setInfoMessage('Unit converter coming soon!') },
+              { name: 'Lab Timer', icon: Clock, color: 'orange', action: () => setInfoMessage('Lab timer coming soon!') }
             ].map((tool, idx) => (
               <button
                 key={idx}
@@ -190,40 +217,55 @@ const ActivityCards = () => {
       title: 'Recent Activity',
       content: (
         <div className="space-y-4">
-          <div className="space-y-3">
-            {[
-              { action: 'Completed Acid-Base Titration', time: '2 hours ago', status: 'completed', icon: CheckCircle },
-              { action: 'Started Periodic Table Quiz', time: 'Yesterday', status: 'in-progress', icon: Clock },
-              { action: 'Viewed Safety Guide', time: '2 days ago', status: 'viewed', icon: Eye },
-              { action: 'Uploaded Lab Report', time: '3 days ago', status: 'completed', icon: Upload }
-            ].map((activity, idx) => (
-              <div key={idx} className="flex items-center p-3 border border-transparent hover:border-gray-100 hover:bg-gray-50 rounded-xl transition-all duration-300 group">
-                <div className={`p-2.5 rounded-xl mr-4 transition-transform duration-300 group-hover:scale-110 ${
-                  activity.status === 'completed' ? 'bg-green-100' :
-                  activity.status === 'in-progress' ? 'bg-yellow-100' : 'bg-gray-100'
-                }`}>
-                  <activity.icon size={18} className={
-                    activity.status === 'completed' ? 'text-green-600' :
-                    activity.status === 'in-progress' ? 'text-yellow-600' : 'text-gray-600'
-                  } />
+          
+          {userActivities.length > 0 ? (
+            <div className="space-y-3">
+              {userActivities.map((activity, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={() => {
+                    setActiveModal(null);
+                    navigate('/experiments', { state: { highlightExpId: activity.id } });
+                  }}
+                  className="flex items-center p-3 border border-transparent hover:border-gray-200 hover:shadow-sm hover:bg-gray-50 rounded-xl transition-all duration-300 group cursor-pointer"
+                >
+                  <div className={`p-2.5 rounded-xl mr-4 transition-transform duration-300 group-hover:scale-110 ${
+                    activity.status === 'completed' ? 'bg-green-100' : 'bg-yellow-100'
+                  }`}>
+                    <activity.icon size={18} className={
+                      activity.status === 'completed' ? 'text-green-600' : 'text-yellow-600'
+                    } />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{activity.action}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 font-medium">{activity.subtitle}</p>
+                  </div>
+                  <ChevronRight size={18} className="text-gray-400 group-hover:text-blue-600 transition-transform duration-300 group-hover:translate-x-1" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{activity.action}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 font-medium">{activity.time}</p>
-                </div>
-                {activity.status === 'completed' && <CheckCircle size={18} className="text-green-500 ml-2" />}
-              </div>
-            ))}
-          </div>
-          <button className="w-full border-2 border-gray-200 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 mt-2">
-            View Full History
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <Activity size={48} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 font-medium">No recent activity yet.</p>
+              <p className="text-xs text-gray-400 mt-1">Start an experiment to see it here!</p>
+            </div>
+          )}
+
+          <button 
+            onClick={() => {
+              setActiveModal(null);
+              navigate('/experiments');
+            }}
+            className="w-full border-2 border-gray-200 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all duration-300 mt-2"
+          >
+            {userActivities.length > 0 ? 'View All Experiments' : 'Browse Experiments'}
           </button>
         </div>
       )
     }
   };
 
-  // ADDED: hoverBorder and glow colors to power the new interactive effects!
   const activities = [
     { icon: FileText, title: 'Attach File', description: 'Upload lab files', color: 'bg-purple-100', iconColor: 'text-purple-600', hoverBorder: 'hover:border-purple-300', glow: 'from-purple-50/50', modalKey: 'attachFile' },
     { icon: Wrench, title: 'Tools', description: 'Lab equipment', color: 'bg-green-100', iconColor: 'text-green-600', hoverBorder: 'hover:border-green-300', glow: 'from-green-50/50', modalKey: 'tools' },
@@ -264,7 +306,6 @@ const ActivityCards = () => {
             <div
               key={index}
               onClick={() => openModal(item.modalKey)}
-              // ✨ Catchy Interactive Hover Applied Here ✨
               className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 transition-all duration-300 cursor-pointer group relative overflow-hidden hover:shadow-xl hover:-translate-y-1.5 ${item.hoverBorder}`}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${item.glow} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
@@ -292,6 +333,31 @@ const ActivityCards = () => {
           {modals[activeModal].content}
         </Modal>
       )}
+
+      {/* ─── CUSTOM INFO MODAL ─── */}
+      {/* Notice z-[200] so it pops above the currently open generic Modal! */}
+      {infoMessage && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden scale-100 animate-fade-in-up">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Info className="text-blue-600" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Coming Soon</h3>
+              <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                {infoMessage}
+              </p>
+              <button 
+                onClick={() => setInfoMessage('')}
+                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };

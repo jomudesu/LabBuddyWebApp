@@ -7,7 +7,8 @@ import {
   ChevronRight, 
   Beaker,
   AlertCircle,
-  Link
+  Link,
+  Info
 } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { useExperiments } from '../../backend/Firebase/useExperiments';
@@ -24,6 +25,9 @@ const QuickLinks = () => {
   const [activeModal, setActiveModal] = useState(null);
   const [randomExperiments, setRandomExperiments] = useState([]);
   const { experiments, loading } = useExperiments();
+  
+  // NEW: State for "Coming Soon" tool alerts
+  const [infoMessage, setInfoMessage] = useState('');
 
   useEffect(() => {
     if (activeModal === 'beginExperiment' && experiments.length > 0 && !loading) {
@@ -154,7 +158,8 @@ const QuickLinks = () => {
             ].map((element, idx) => (
               <button
                 key={idx}
-                onClick={() => alert(`${element}\n\nAtomic properties coming soon!`)}
+                // FIXED: Hooked up to the new infoMessage state!
+                onClick={() => setInfoMessage(`${element}\n\nAtomic properties coming soon!`)}
                 className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-300 text-center font-mono font-bold"
               >
                 {element}
@@ -174,10 +179,8 @@ const QuickLinks = () => {
             </div>
           </div>
           <button 
-            onClick={() => {
-              setActiveModal(null);
-              alert('Full interactive periodic table coming soon!');
-            }}
+            // FIXED: Hooked up to the new infoMessage state!
+            onClick={() => setInfoMessage('Full interactive periodic table coming soon!')}
             className="w-full bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
           >
             Open Full Periodic Table
@@ -227,7 +230,6 @@ const QuickLinks = () => {
               <button
                 key={index}
                 onClick={() => setActiveModal(link.modalKey)}
-                // ✨ Catchy Interactive Hover Applied Here ✨
                 className="w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 group border border-transparent hover:border-gray-200 hover:shadow-md hover:-translate-y-1 bg-gray-50/50 hover:bg-white relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -252,6 +254,31 @@ const QuickLinks = () => {
           {modals[activeModal].content}
         </Modal>
       )}
+
+      {/* ─── CUSTOM INFO MODAL ─── */}
+      {/* Notice z-[200] so it pops above the currently open generic Modal! */}
+      {infoMessage && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden scale-100 animate-fade-in-up">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Info className="text-blue-600" size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Coming Soon</h3>
+              <p className="text-gray-500 text-sm mb-6 leading-relaxed whitespace-pre-wrap">
+                {infoMessage}
+              </p>
+              <button 
+                onClick={() => setInfoMessage('')}
+                className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };
