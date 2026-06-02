@@ -13,50 +13,32 @@ import {
   Sparkles,
   Microscope,
   TestTube,
-  Brain
+  Brain,
+  CheckCircle 
 } from 'lucide-react';
 import { useAuth } from '../backend/Firebase/AuthContext';
 
 const Landing = () => {
   const [isLogin, setIsLogin] = useState(true);
+  
+  // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [role, setRole] = useState('student');
+  const [section, setSection] = useState('');
+  
+  // UI State
   const [localError, setLocalError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [formHeight, setFormHeight] = useState('360px');
   const [isAtBottom, setIsAtBottom] = useState(false);
-  const loginFormRef = useRef(null);
-  const registerFormRef = useRef(null);
+  
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
   const { login, register, error: authError } = useAuth();
 
-  // Adjust height based on login/register state
-  useEffect(() => {
-    if (isLogin) {
-      setFormHeight(loginFormRef.current?.scrollHeight + 'px');
-    } else {
-      setFormHeight(registerFormRef.current?.scrollHeight + 'px');
-    }
-  }, [isLogin]);
-
-  // Also update height on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (isLogin) {
-        setFormHeight(loginFormRef.current?.scrollHeight + 'px');
-      } else {
-        setFormHeight(registerFormRef.current?.scrollHeight + 'px');
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isLogin]);
-
-  // Check scroll position
   useEffect(() => {
     const handleScroll = () => {
       if (scrollContainerRef.current) {
@@ -69,7 +51,6 @@ const Landing = () => {
     const container = scrollContainerRef.current;
     if (container) {
       container.addEventListener('scroll', handleScroll);
-      // Initial check
       handleScroll();
     }
 
@@ -80,16 +61,28 @@ const Landing = () => {
     };
   }, []);
 
+  const resetMessages = () => {
+    setLocalError('');
+    setSuccessMessage('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLocalError('');
+    resetMessages();
     setLoading(true);
 
     try {
       if (isLogin) {
-        await login(email, password);
-        navigate('/dashboard');
+        const response = await login(email, password);
+        const userRole = response?.role || 'student'; 
+        
+        if (userRole === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
+        // Registration Validation
         if (password !== confirmPassword) {
           setLocalError("Passwords don't match");
           setLoading(false);
@@ -100,8 +93,22 @@ const Landing = () => {
           setLoading(false);
           return;
         }
-        await register(email, password, displayName);
-        navigate('/dashboard');
+        if (role === 'student' && !section.trim()) {
+          setLocalError('Class Section is required for students');
+          setLoading(false);
+          return;
+        }
+
+        const finalSection = role === 'student' ? section.trim() : '-';
+        const response = await register(email, password, displayName, role, finalSection);
+
+        if (response && response.status === 'pending') {
+          setSuccessMessage('Instructor account created successfully! Please wait for an Admin to verify and approve your account before logging in.');
+          setIsLogin(true); 
+          setEmail(''); setPassword(''); setConfirmPassword(''); setDisplayName(''); setSection('');
+        } else {
+          navigate('/dashboard'); 
+        }
       }
     } catch (err) {
       console.error('Auth error:', err);
@@ -110,17 +117,13 @@ const Landing = () => {
     }
   };
 
-  // Custom smooth scroll function
   const smoothScrollTo = (element, targetPosition, duration = 1000) => {
     const startPosition = element.scrollTop;
     const distance = targetPosition - startPosition;
     const startTime = performance.now();
     
-    // Easing function for smooth acceleration and deceleration
     const easeInOutCubic = (t) => {
-      return t < 0.5 
-        ? 4 * t * t * t 
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     };
     
     const animation = (currentTime) => {
@@ -141,12 +144,9 @@ const Landing = () => {
   const handleScrollClick = () => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      
       if (isAtBottom) {
-        // If at bottom, scroll back to top smoothly
         smoothScrollTo(container, 0, 1000);
       } else {
-        // Otherwise scroll to bottom smoothly
         smoothScrollTo(container, container.scrollHeight, 1000);
       }
     }
@@ -154,15 +154,31 @@ const Landing = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700">
-      {/* Left Side - 60% Scrollable Preview with Particles and Hidden Scrollbar */}
+      
+      {/* Sleek Custom Scrollbar CSS for the right-side form */}
+      <style>{`
+        .form-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .form-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .form-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #cbd5e1;
+          border-radius: 10px;
+        }
+        .form-scrollbar:hover::-webkit-scrollbar-thumb {
+          background-color: #94a3b8;
+        }
+      `}</style>
+
+      {/* Left Side - 60% Scrollable Preview */}
       <div 
         ref={scrollContainerRef}
         className="w-3/5 overflow-y-auto bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700 scrollbar-hide relative"
       >
-        
-        {/* Hero Section - with minimum height to ensure scrolling */}
+        {/* Hero Section */}
         <div className="relative text-white p-12 overflow-hidden min-h-screen flex items-center">
-          {/* Animated background elements */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-10 left-10 animate-pulse">
               <Beaker size={60} className="text-white" />
@@ -175,7 +191,6 @@ const Landing = () => {
             </div>
           </div>
 
-          {/* Floating particles */}
           <div className="absolute inset-0">
             {[...Array(30)].map((_, i) => (
               <div
@@ -191,7 +206,6 @@ const Landing = () => {
             ))}
           </div>
 
-          {/* Content */}
           <div className="relative z-10">
             <div className="flex items-center mb-8 cursor-pointer group">
               <Beaker size={40} className="mr-3 text-white transform group-hover:rotate-12 transition-transform duration-300" />
@@ -206,7 +220,6 @@ const Landing = () => {
             <p className="text-xl text-blue-100 max-w-2xl mb-8 animate-fade-in-up animation-delay-200">
               Experience immersive science learning with interactive experiments, virtual lab equipment, and real-time simulations.
             </p>
-            
           </div>
         </div>
 
@@ -239,14 +252,10 @@ const Landing = () => {
                 <p className="text-blue-100 text-sm mt-2">
                   {item.desc}
                 </p>
-                <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-xs text-yellow-300">Learn more →</span>
-                </div>
               </div>
             ))}
           </div>
 
-          {/* Preview Cards */}
           <h3 className="text-2xl font-bold text-white mt-12 mb-6 flex items-center">
             <Microscope className="mr-2 text-yellow-300" size={28} />
             What You'll Experience
@@ -277,47 +286,36 @@ const Landing = () => {
           </div>
         </div>
 
-        {/* Scroll Down/Up Indicator - Fixed at bottom right */}
         <div className="sticky bottom-8 flex justify-end pr-8 pointer-events-none z-20">
           <div 
             className="group bg-white/20 backdrop-blur-sm rounded-full p-3 shadow-lg border border-white/30 hover:bg-white/30 hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer pointer-events-auto animate-bounce-slow"
             onClick={handleScrollClick}
           >
             {isAtBottom ? (
-              <ChevronUp 
-                className="text-white group-hover:-translate-y-1 transition-transform duration-300" 
-                size={24} 
-              />
+              <ChevronUp className="text-white group-hover:-translate-y-1 transition-transform duration-300" size={24} />
             ) : (
-              <ChevronDown 
-                className="text-white group-hover:translate-y-1 transition-transform duration-300" 
-                size={24} 
-              />
+              <ChevronDown className="text-white group-hover:translate-y-1 transition-transform duration-300" size={24} />
             )}
           </div>
         </div>
-
       </div>
 
-      {/* Right Side - 40% Login/Register with Sliding Toggle and Expanding Animation */}
+      {/* Right Side - 40% Login/Register */}
       <div className="w-2/5 flex items-center justify-center p-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-          {/* Sliding Toggle */}
-          <div className="relative mb-8">
-            {/* Background Track */}
+        {/* FIXED: The main card is now a flex container with a max-height of 90vh */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md max-h-[90vh] flex flex-col">
+          
+          {/* Sliding Toggle (Stays fixed at the top) */}
+          <div className="relative mb-6 shrink-0">
             <div className="absolute inset-0 bg-gray-100 rounded-lg"></div>
-            
-            {/* Sliding Background */}
             <div 
               className={`absolute top-0 bottom-0 w-1/2 bg-white rounded-lg shadow-md transition-transform duration-300 ease-in-out ${
                 isLogin ? 'translate-x-0' : 'translate-x-full'
               }`}
             ></div>
-            
-            {/* Buttons */}
             <div className="relative flex">
               <button
-                onClick={() => setIsLogin(true)}
+                onClick={() => { setIsLogin(true); resetMessages(); }}
                 className={`flex-1 py-2 text-center font-medium transition-colors duration-300 z-10 ${
                   isLogin ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
                 }`}
@@ -325,7 +323,7 @@ const Landing = () => {
                 Login
               </button>
               <button
-                onClick={() => setIsLogin(false)}
+                onClick={() => { setIsLogin(false); resetMessages(); }}
                 className={`flex-1 py-2 text-center font-medium transition-colors duration-300 z-10 ${
                   !isLogin ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
                 }`}
@@ -337,122 +335,178 @@ const Landing = () => {
 
           {/* Error Message */}
           {(localError || authError) && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center text-red-700 animate-shake">
-              <AlertCircle size={18} className="mr-2 flex-shrink-0" />
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start text-red-700 animate-shake shrink-0">
+              <AlertCircle size={18} className="mr-2 flex-shrink-0 mt-0.5" />
               <span className="text-sm">{localError || authError}</span>
             </div>
           )}
 
-          {/* Form Container with Expanding Animation */}
-          <div 
-            className="overflow-hidden transition-all duration-500 ease-in-out"
-            style={{ height: formHeight }}
-          >
-          {isLogin ? (
-            // Login Form
-            <div ref={loginFormRef} className="animate-fade-in">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome Back!</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    placeholder="student@example.com"
-                  />
-                </div>
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    placeholder="••••••••"
-                  />
-                </div>
-                <button 
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] disabled:bg-blue-300 disabled:cursor-not-allowed disabled:hover:scale-100 mb-4"
-                >
-                  {loading ? 'Signing in...' : 'Sign In'}
-                </button>
-                <p className="text-center text-sm text-gray-600">
-                  <a href="#" className="text-blue-600 hover:underline transition-colors">
-                    Forgot password?
-                  </a>
-                </p>
-              </form>
-            </div>
-          ) : (
-            // Register Form
-            <div ref={registerFormRef} className="animate-fade-in">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Account</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    placeholder="student@example.com"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    placeholder="••••••••"
-                    minLength="6"
-                  />
-                </div>
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
-                    placeholder="••••••••"
-                  />
-                </div>
-                <button 
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] disabled:bg-blue-300 disabled:cursor-not-allowed disabled:hover:scale-100 mb-4"
-                >
-                  {loading ? 'Creating Account...' : 'Create Account'}
-                </button>
-                <p className="text-center text-sm text-gray-600">
-                  By signing up, you agree to our{' '}
-                  <a href="#" className="text-blue-600 hover:underline transition-colors">Terms</a>
-                </p>
-              </form>
+          {/* Success Message (for Pending Instructors) */}
+          {successMessage && (
+            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start text-emerald-800 animate-fade-in-up shrink-0">
+              <CheckCircle size={18} className="mr-2 flex-shrink-0 mt-0.5 text-emerald-600" />
+              <span className="text-sm font-medium">{successMessage}</span>
             </div>
           )}
+
+          {/* FIXED: The Form Container is now the scrollable element! */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden form-scrollbar pr-2 -mr-2 pb-2">
+            
+            {isLogin ? (
+              // Login Form
+              <div className="animate-fade-in">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome Back!</h2>
+                <form onSubmit={handleSubmit}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="name@earist.edu"
+                    />
+                  </div>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] disabled:bg-blue-300 disabled:cursor-not-allowed disabled:hover:scale-100 mb-4"
+                  >
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </button>
+                  <p className="text-center text-sm text-gray-600">
+                    <a href="#" className="text-blue-600 hover:underline transition-colors">
+                      Forgot password?
+                    </a>
+                  </p>
+                </form>
+              </div>
+            ) : (
+              // Register Form
+              <div className="animate-fade-in">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Account</h2>
+                <form onSubmit={handleSubmit}>
+                  
+                  {/* Custom Role Selector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Account Role</label>
+                    <div className="flex gap-4">
+                      <label className="flex-1 relative">
+                        <input 
+                          type="radio" 
+                          name="role" 
+                          value="student" 
+                          checked={role === 'student'} 
+                          onChange={() => setRole('student')} 
+                          className="peer sr-only"
+                        />
+                        <div className="p-3 text-center border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-700 font-medium transition-all text-sm text-gray-500">
+                          Student
+                        </div>
+                      </label>
+                      <label className="flex-1 relative">
+                        <input 
+                          type="radio" 
+                          name="role" 
+                          value="instructor" 
+                          checked={role === 'instructor'} 
+                          onChange={() => setRole('instructor')} 
+                          className="peer sr-only"
+                        />
+                        <div className="p-3 text-center border-2 border-gray-200 rounded-lg cursor-pointer peer-checked:border-purple-500 peer-checked:bg-purple-50 peer-checked:text-purple-700 font-medium transition-all text-sm text-gray-500">
+                          Instructor
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="Juan Dela Cruz"
+                    />
+                  </div>
+
+                  {role === 'student' && (
+                    <div className="mb-4 animate-fade-in">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Class Section</label>
+                      <input
+                        type="text"
+                        required
+                        value={section}
+                        onChange={(e) => setSection(e.target.value.toUpperCase())}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 uppercase"
+                        placeholder="e.g. BSXX-XX"
+                      />
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="student@earist.edu"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="••••••••"
+                      minLength="6"
+                    />
+                  </div>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] disabled:bg-blue-300 disabled:cursor-not-allowed disabled:hover:scale-100 mb-4"
+                  >
+                    {loading ? 'Creating Account...' : 'Create Account'}
+                  </button>
+                  <p className="text-center text-sm text-gray-600">
+                    By signing up, you agree to our{' '}
+                    <a href="#" className="text-blue-600 hover:underline transition-colors">Terms</a>
+                  </p>
+                </form>
+              </div>
+            )}
+            
           </div>
         </div>
       </div>

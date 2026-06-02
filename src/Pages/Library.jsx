@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Book, BookOpen, Video, FileText, Search, Filter, X, ArrowDownAZ, LayoutGrid } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Book, BookOpen, Video, FileText, Search, Filter, X, ArrowDownAZ, LayoutGrid, Database } from 'lucide-react';
 
 const Library = () => {
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // ─── STATE MANAGEMENT FOR CONTROLS ───
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,8 +20,9 @@ const Library = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Mock Database
+  // Mock Database - Added Lab Inventory as the featured first item!
   const resources = useMemo(() => [
+    { id: 'inv', title: 'Lab Inventory Database', type: 'Interactive', icon: Database, color: 'text-teal-600', bg: 'bg-teal-100', route: '/inventory' },
     { id: 1, title: 'Chemistry Lab Manual', type: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-100' },
     { id: 2, title: 'Periodic Table Guide', type: 'Interactive', icon: Book, color: 'text-blue-600', bg: 'bg-blue-100' },
     { id: 3, title: 'Safety Procedures', type: 'Video', icon: Video, color: 'text-green-600', bg: 'bg-green-100' },
@@ -56,7 +59,7 @@ const Library = () => {
   // ─── SKELETON LOADER ───
   if (loading) {
     return (
-      <div className="p-8 bg-slate-100 min-h-screen">
+      <div className="p-8 bg-slate-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse mb-8"></div>
           <div className="h-12 w-full bg-gray-200 rounded-xl animate-pulse mb-6"></div>
@@ -77,7 +80,7 @@ const Library = () => {
   const activeFilterCount = (filters.type !== 'All' ? 1 : 0) + (filters.sortBy !== 'default' ? 1 : 0);
 
   return (
-    <div className="bg-slate-100 min-h-screen w-full">
+    <div className="bg-slate-50 min-h-screen w-full">
       <div className="p-8 max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Resource Library</h1>
@@ -91,7 +94,7 @@ const Library = () => {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search resources, manuals, and videos..." 
+              placeholder="Search resources, manuals, and databases..." 
               className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
             />
           </div>
@@ -171,13 +174,12 @@ const Library = () => {
           {processedResources.map((resource) => (
             <div 
               key={resource.id} 
-              // ✨ Catchy Interactive Hover Applied Here ✨
+              // Smart Click: Navigates if route exists, otherwise triggers an alert placeholder
+              onClick={() => resource.route ? navigate(resource.route) : alert(`Opening ${resource.title}...`)}
               className="group bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-2 hover:border-blue-300 transition-all duration-300 flex flex-col relative overflow-hidden cursor-pointer"
             >
-              {/* Subtle hover background glow */}
               <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               
-              {/* Icon Container (Scales and tilts on hover) */}
               <div className={`${resource.bg} p-3.5 rounded-xl w-fit mb-4 relative z-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-md`}>
                 <resource.icon className={resource.color} size={24} />
               </div>
@@ -188,7 +190,7 @@ const Library = () => {
               </div>
               
               <button className="mt-5 text-blue-600 text-sm font-bold flex items-center group-hover:text-blue-700 transition-colors relative z-10">
-                View Resource 
+                {resource.route ? 'Open Directory' : 'View Resource'}
                 <span className="ml-1 inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
               </button>
             </div>

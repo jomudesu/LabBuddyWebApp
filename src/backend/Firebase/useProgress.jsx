@@ -79,4 +79,5 @@ export const ProgressProvider = ({ children }) => {
 };
 
 // 3. Export the hook so your other components don't need to change their imports
+// eslint-disable-next-line react-refresh/only-export-components
 export const useProgress = () => useContext(ProgressContext);

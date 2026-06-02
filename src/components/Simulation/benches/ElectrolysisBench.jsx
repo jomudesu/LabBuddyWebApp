@@ -54,8 +54,6 @@ const ElectrolysisBench = ({
               <div className="absolute -bottom-6 flex gap-6 z-20">
                 {/* Cathode (Left) */}
                 <div className="relative flex flex-col items-center justify-end h-[160px]">
-                  
-                  {/* CHANGED: Brought back pulse-glow and added !rounded-t-full to force the correct shape */}
                   <div 
                     className={`absolute top-0 w-8 h-28 bg-white/20 backdrop-blur-sm border-x-2 border-t-2 border-white/60 rounded-t-full overflow-hidden transition-all duration-700 cursor-pointer z-30 ${
                       tubesPlaced || (target === 'test_tubes' && animating) ? 'translate-y-0 opacity-100' : 
