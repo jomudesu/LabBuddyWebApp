@@ -16,11 +16,14 @@ import {
   ShieldAlert,
   Skull
 } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../backend/Firebase/firebase';
 
 const Inventory = () => {
+  // ─── STATE MANAGEMENT ───
+  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ─── STATE MANAGEMENT ───
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -28,63 +31,82 @@ const Inventory = () => {
     hazard: 'All'
   });
 
-  // Simulate a network fetch
+  // ─── REAL-TIME FIREBASE CONNECTION ───
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(timer);
+    const unsubscribe = onSnapshot(collection(db, 'inventory'), (snapshot) => {
+      const fetchedItems = [];
+      snapshot.forEach((doc) => {
+        fetchedItems.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // Sort alphabetically by name
+      fetchedItems.sort((a, b) => a.name.localeCompare(b.name));
+      
+      setInventory(fetchedItems);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // ─── MOCK DATABASE ───
-  const inventoryData = useMemo(() => [
-    { id: 1, name: 'Hydrochloric Acid', formula: '0.1M HCl', category: 'Chemical', hazard: 'Corrosive', icon: FlaskConical, color: 'blue' },
-    { id: 2, name: 'Sodium Hydroxide', formula: '0.1M NaOH', category: 'Chemical', hazard: 'Corrosive', icon: FlaskConical, color: 'blue' },
-    { id: 3, name: 'Copper Strips', formula: 'Cu', category: 'Metal', hazard: 'Safe', icon: Box, color: 'orange' },
-    { id: 4, name: 'Zinc Powder', formula: 'Zn', category: 'Metal', hazard: 'Flammable', icon: Box, color: 'gray' },
-    { id: 5, name: 'Digital pH Meter', formula: 'Instrument', category: 'Equipment', hazard: 'Safe', icon: Cpu, color: 'purple' },
-    { id: 6, name: 'Magnetic Stirrer', formula: 'Apparatus', category: 'Equipment', hazard: 'Safe', icon: Activity, color: 'purple' },
-    { id: 7, name: '250mL Beaker', formula: 'Borosilicate', category: 'Glassware', hazard: 'Safe', icon: Beaker, color: 'emerald' },
-    { id: 8, name: 'Burette 50mL', formula: 'Glassware', category: 'Glassware', hazard: 'Safe', icon: Beaker, color: 'emerald' },
-    { id: 9, name: 'Phenolphthalein', formula: 'Indicator', category: 'Chemical', hazard: 'Irritant', icon: FlaskConical, color: 'pink' },
-    { id: 10, name: 'Barium Chloride', formula: 'BaCl2', category: 'Chemical', hazard: 'Toxic', icon: FlaskConical, color: 'blue' },
-  ], []);
-
-  const categories = ['All', 'Chemical', 'Metal', 'Equipment', 'Glassware'];
-  const hazards = ['All', 'Safe', 'Irritant', 'Flammable', 'Corrosive', 'Toxic'];
+  // Update categories to match the Admin CMS options
+  const categories = ['All', 'Chemical', 'Glassware', 'Equipment', 'Safety'];
+  const hazards = ['All', 'None', 'Flammable', 'Toxic', 'Corrosive'];
 
   // ─── FILTERING ENGINE ───
   const processedItems = useMemo(() => {
-    return inventoryData.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            item.formula.toLowerCase().includes(searchQuery.toLowerCase());
+    return inventory.filter(item => {
+      const safeName = (item.name || '').toLowerCase();
+      const safeDetails = (item.details || '').toLowerCase();
+      const query = searchQuery.toLowerCase();
+
+      const matchesSearch = safeName.includes(query) || safeDetails.includes(query);
       const matchesCategory = filters.category === 'All' || item.category === filters.category;
-      const matchesHazard = filters.hazard === 'All' || item.hazard === filters.hazard;
+      
+      // Handle the "None" / "Safe" overlap gracefully
+      const itemHazard = item.hazard === 'None' ? 'Safe' : item.hazard;
+      const filterHazardMapped = filters.hazard === 'None' ? 'Safe' : filters.hazard;
+      const matchesHazard = filters.hazard === 'All' || itemHazard === filterHazardMapped;
+      
       return matchesSearch && matchesCategory && matchesHazard;
     });
-  }, [inventoryData, searchQuery, filters]);
+  }, [inventory, searchQuery, filters]);
 
   const handleClearFilters = () => {
     setFilters({ category: 'All', hazard: 'All' });
     setSearchQuery('');
   };
 
-  // ─── DYNAMIC BADGE STYLING ───
+  // ─── DYNAMIC BADGE & STYLING HELPERS ───
+  
+  // Assigns colors and icons dynamically based on the database category
+  const getCategoryTheme = (category) => {
+    switch (category) {
+      case 'Chemical': return { icon: FlaskConical, color: 'blue' };
+      case 'Glassware': return { icon: Beaker, color: 'emerald' };
+      case 'Equipment': return { icon: Cpu, color: 'purple' };
+      case 'Safety': return { icon: ShieldAlert, color: 'orange' };
+      default: return { icon: Box, color: 'gray' };
+    }
+  };
+
   const getHazardBadge = (hazard) => {
     switch (hazard) {
+      case 'None': 
       case 'Safe': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'Irritant': return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'Flammable': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'Corrosive': return 'bg-rose-50 text-rose-700 border-rose-200';
-      case 'Toxic': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'Corrosive': return 'bg-yellow-50 text-yellow-700 border-yellow-300';
+      case 'Toxic': return 'bg-rose-50 text-rose-700 border-rose-200';
       default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   const getHazardIcon = (hazard) => {
     switch (hazard) {
+      case 'None': 
       case 'Safe': return <CheckCircle2 size={14} className="mr-1" />;
-      case 'Irritant': return <AlertCircle size={14} className="mr-1" />;
       case 'Flammable': return <Flame size={14} className="mr-1" />;
-      case 'Corrosive': return <ShieldAlert size={14} className="mr-1" />;
+      case 'Corrosive': return <AlertTriangle size={14} className="mr-1" />;
       case 'Toxic': return <Skull size={14} className="mr-1" />;
       default: return null;
     }
@@ -131,7 +153,7 @@ const Inventory = () => {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chemicals, metals, equipment..." 
+              placeholder="Search chemicals, glassware, equipment..." 
               className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium" 
             />
           </div>
@@ -168,7 +190,7 @@ const Inventory = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><LayoutGrid size={16} className="text-blue-500"/> Item Category</label>
+                <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><LayoutGrid size={16} className="text-blue-500"/> Item Category</label>
                 <select 
                   value={filters.category} 
                   onChange={(e) => setFilters({...filters, category: e.target.value})}
@@ -178,7 +200,7 @@ const Inventory = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><AlertTriangle size={16} className="text-blue-500"/> Hazard Level</label>
+                <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2"><AlertTriangle size={16} className="text-blue-500"/> Hazard Level</label>
                 <select 
                   value={filters.hazard} 
                   onChange={(e) => setFilters({...filters, hazard: e.target.value})}
@@ -203,41 +225,45 @@ const Inventory = () => {
 
         {/* ─── INVENTORY GRID ─── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {processedItems.map((item) => (
-            <div 
-              key={item.id} 
-              className={`group bg-white rounded-2xl p-6 transition-all duration-300 flex flex-col relative overflow-hidden cursor-pointer shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 hover:border-${item.color}-300`}
-              onClick={() => alert(`${item.name} details coming soon!`)}
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br from-${item.color}-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
-              
-              <div className="flex justify-between items-start mb-4 relative z-10">
-                <div className={`bg-${item.color}-100 p-3.5 rounded-xl w-fit transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-md`}>
-                  <item.icon className={`text-${item.color}-600`} size={24} />
-                </div>
+          {processedItems.map((item) => {
+            const { icon: IconComponent, color } = getCategoryTheme(item.category);
+            
+            return (
+              <div 
+                key={item.id} 
+                className={`group bg-white rounded-2xl p-6 transition-all duration-300 flex flex-col relative overflow-hidden cursor-pointer shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 hover:border-${color}-300`}
+                onClick={() => alert(`${item.name} details coming soon!`)}
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br from-${color}-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
                 
-                {/* Dynamically colored hazard badge */}
-                <span className={`flex items-center text-[11px] font-bold px-2.5 py-1.5 rounded-md border shadow-sm ${getHazardBadge(item.hazard)}`}>
-                  {getHazardIcon(item.hazard)}
-                  {item.hazard.toUpperCase()}
-                </span>
-              </div>
-
-              <div className="relative z-10 flex-1">
-                <h3 className={`text-xl font-bold text-gray-800 leading-tight group-hover:text-${item.color}-700 transition-colors`}>
-                  {item.name}
-                </h3>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={`text-xs font-bold text-${item.color}-600 bg-${item.color}-50 px-2 py-1 rounded border border-${item.color}-100`}>
-                    {item.category}
-                  </span>
-                  <span className="text-sm font-medium text-gray-500">
-                    {item.formula}
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                  <div className={`bg-${color}-100 p-3.5 rounded-xl w-fit transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-md`}>
+                    <IconComponent className={`text-${color}-600`} size={24} />
+                  </div>
+                  
+                  {/* Dynamically colored hazard badge */}
+                  <span className={`flex items-center text-[11px] font-bold px-2.5 py-1.5 rounded-md border shadow-sm ${getHazardBadge(item.hazard)}`}>
+                    {getHazardIcon(item.hazard)}
+                    {item.hazard === 'None' ? 'SAFE' : item.hazard.toUpperCase()}
                   </span>
                 </div>
+
+                <div className="relative z-10 flex-1">
+                  <h3 className={`text-xl font-bold text-gray-800 leading-tight group-hover:text-${color}-700 transition-colors`}>
+                    {item.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`text-xs font-bold text-${color}-600 bg-${color}-50 px-2 py-1 rounded border border-${color}-100`}>
+                      {item.category}
+                    </span>
+                    <span className="text-sm font-medium text-gray-500 truncate">
+                      {item.details || 'No details provided'}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>

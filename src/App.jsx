@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './backend/Firebase/AuthContext';
 import { ProgressProvider } from './backend/Firebase/useProgress'; 
+import { Bell } from 'lucide-react'; // ✨ Added this import for the banner icon
 
 // Layouts
 import Sidebar from './components/Layout/Sidebar';
@@ -13,16 +14,15 @@ import Dashboard from './pages/Dashboard';
 import Experiments from './pages/Experiments';
 import Library from './pages/Library';
 import ExperimentPage from './pages/ExperimentPage';
-import Inventory from './components/Dashboard/Inventory';
+import Inventory from './pages/Inventory';
 
 // Admin Pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ManageAccounts from './pages/Admin/ManageAccounts';
 import ManageExperiments from './pages/Admin/ManageExperiments';
-
-const AdminInventory = () => <div className="p-8 text-2xl font-bold text-slate-200">Global Inventory</div>;
-const SystemReports = () => <div className="p-8 text-2xl font-bold text-slate-200">System Reports & Printing</div>;
-const AdminSettings = () => <div className="p-8 text-2xl font-bold text-slate-200">System Settings</div>;
+import GlobalInventory from './pages/Admin/GlobalInventory';
+import ReportPrinting from './pages/Admin/ReportPrinting';
+import SystemSettings from './pages/Admin/SystemSettings';
 
 // ─── ROUTE PROTECTORS ───
 
@@ -51,14 +51,32 @@ const LoadingScreen = () => (
   </div>
 );
 
-const AuthenticatedLayout = ({ children }) => (
-  <div className="flex h-screen bg-slate-50">
-    <Sidebar />
-    <div className="flex-1 overflow-auto">
-      {children}
+// ✨ MODIFIED: Injects the global announcement banner into the student layout
+const AuthenticatedLayout = ({ children }) => {
+  const { platformSettings } = useAuth();
+  
+  return (
+    <div className="flex h-screen bg-slate-50">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* GLOBAL ANNOUNCEMENT BANNER */}
+        {platformSettings?.announcementBanner && (
+          <div className="bg-blue-600 text-white px-6 py-3 flex items-center justify-center shrink-0 shadow-md z-20 animate-fade-in-up">
+            <Bell size={16} className="mr-2 text-blue-200 shrink-0" />
+            <p className="text-sm font-medium tracking-wide text-center">
+              {platformSettings.announcementBanner}
+            </p>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-auto relative">
+          {children}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 function AppRoutes() {
   return (
@@ -76,9 +94,9 @@ function AppRoutes() {
       <Route path="/admin/dashboard" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
       <Route path="/admin/accounts" element={<AdminRoute><AdminLayout><ManageAccounts /></AdminLayout></AdminRoute>} />
       <Route path="/admin/experiments" element={<AdminRoute><AdminLayout><ManageExperiments /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/inventory" element={<AdminRoute><AdminLayout><AdminInventory /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/reports" element={<AdminRoute><AdminLayout><SystemReports /></AdminLayout></AdminRoute>} />
-      <Route path="/admin/settings" element={<AdminRoute><AdminLayout><AdminSettings /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/inventory" element={<AdminRoute><AdminLayout><GlobalInventory /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/reports" element={<AdminRoute><AdminLayout><ReportPrinting /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/settings" element={<AdminRoute><AdminLayout><SystemSettings /></AdminLayout></AdminRoute>} />
       
     </Routes>
   );

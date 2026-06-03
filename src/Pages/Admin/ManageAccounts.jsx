@@ -271,7 +271,7 @@ const ManageAccounts = () => {
                     type="text" 
                     value={editingUser.section}
                     onChange={(e) => setEditingUser({...editingUser, section: e.target.value})}
-                    placeholder="e.g. BSCS-3A"
+                    placeholder="e.g. BSXX-XX"
                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 transition-all font-medium uppercase"
                   />
                 </div>

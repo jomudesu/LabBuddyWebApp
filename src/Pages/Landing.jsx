@@ -14,12 +14,16 @@ import {
   Microscope,
   TestTube,
   Brain,
-  CheckCircle 
+  CheckCircle,
+  Wrench,
+  ArrowLeft // ✨ NEW ICON
 } from 'lucide-react';
 import { useAuth } from '../backend/Firebase/AuthContext';
 
 const Landing = () => {
+  const { login, register, resetPassword, error: authError, platformSettings } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false); // ✨ NEW STATE
   
   // Form State
   const [email, setEmail] = useState('');
@@ -28,6 +32,7 @@ const Landing = () => {
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState('student');
   const [section, setSection] = useState('');
+  const [resetEmail, setResetEmail] = useState(''); // ✨ NEW STATE
   
   // UI State
   const [localError, setLocalError] = useState('');
@@ -37,7 +42,13 @@ const Landing = () => {
   
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
-  const { login, register, error: authError } = useAuth();
+
+  // Force login view if registrations are closed dynamically
+  useEffect(() => {
+    if (platformSettings && !platformSettings.allowRegistrations) {
+      setIsLogin(true);
+    }
+  }, [platformSettings]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,6 +75,23 @@ const Landing = () => {
   const resetMessages = () => {
     setLocalError('');
     setSuccessMessage('');
+  };
+
+  // ✨ NEW: Password Reset Handler
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    resetMessages();
+    setLoading(true);
+    try {
+      await resetPassword(resetEmail);
+      setSuccessMessage('Password reset link sent! Please check your inbox.');
+      setResetEmail('');
+    } catch (err) {
+      // Error is caught and displayed via authError from context
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -103,7 +131,7 @@ const Landing = () => {
         const response = await register(email, password, displayName, role, finalSection);
 
         if (response && response.status === 'pending') {
-          setSuccessMessage('Instructor account created successfully! Please wait for an Admin to verify and approve your account before logging in.');
+          setSuccessMessage('Instructor account created successfully! Wait for an Admin to approve your account.');
           setIsLogin(true); 
           setEmail(''); setPassword(''); setConfirmPassword(''); setDisplayName(''); setSection('');
         } else {
@@ -152,24 +180,18 @@ const Landing = () => {
     }
   };
 
+  const registrationsOpen = platformSettings?.allowRegistrations ?? true;
+  const isMaintenanceMode = platformSettings?.maintenanceMode ?? false;
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700">
       
       {/* Sleek Custom Scrollbar CSS for the right-side form */}
       <style>{`
-        .form-scrollbar::-webkit-scrollbar {
-          width: 5px;
-        }
-        .form-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .form-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #cbd5e1;
-          border-radius: 10px;
-        }
-        .form-scrollbar:hover::-webkit-scrollbar-thumb {
-          background-color: #94a3b8;
-        }
+        .form-scrollbar::-webkit-scrollbar { width: 5px; }
+        .form-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .form-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .form-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #94a3b8; }
       `}</style>
 
       {/* Left Side - 60% Scrollable Preview */}
@@ -300,38 +322,54 @@ const Landing = () => {
         </div>
       </div>
 
-      {/* Right Side - 40% Login/Register */}
-      <div className="w-2/5 flex items-center justify-center p-8">
-        {/* FIXED: The main card is now a flex container with a max-height of 90vh */}
+      {/* Right Side - 40% Login/Register/Reset */}
+      <div className="w-2/5 flex items-center justify-center p-8 relative">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md max-h-[90vh] flex flex-col">
           
-          {/* Sliding Toggle (Stays fixed at the top) */}
-          <div className="relative mb-6 shrink-0">
-            <div className="absolute inset-0 bg-gray-100 rounded-lg"></div>
-            <div 
-              className={`absolute top-0 bottom-0 w-1/2 bg-white rounded-lg shadow-md transition-transform duration-300 ease-in-out ${
-                isLogin ? 'translate-x-0' : 'translate-x-full'
-              }`}
-            ></div>
-            <div className="relative flex">
-              <button
-                onClick={() => { setIsLogin(true); resetMessages(); }}
-                className={`flex-1 py-2 text-center font-medium transition-colors duration-300 z-10 ${
-                  isLogin ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => { setIsLogin(false); resetMessages(); }}
-                className={`flex-1 py-2 text-center font-medium transition-colors duration-300 z-10 ${
-                  !isLogin ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Register
-              </button>
+          {/* Real-time Maintenance Warning */}
+          {isMaintenanceMode && (
+            <div className="mb-6 bg-amber-100 text-amber-800 p-3 rounded-lg flex items-center shadow-inner border border-amber-200 text-sm font-bold shrink-0">
+              <Wrench className="mr-2 shrink-0 text-amber-600" size={18} />
+              System Under Maintenance. Only Admins may log in.
             </div>
-          </div>
+          )}
+
+          {/* Hides the sliding toggle completely if we are in "Forgot Password" mode */}
+          {!isForgotPassword && registrationsOpen && (
+            <div className="relative mb-6 shrink-0">
+              <div className="absolute inset-0 bg-gray-100 rounded-lg"></div>
+              <div 
+                className={`absolute top-0 bottom-0 w-1/2 bg-white rounded-lg shadow-md transition-transform duration-300 ease-in-out ${
+                  isLogin ? 'translate-x-0' : 'translate-x-full'
+                }`}
+              ></div>
+              <div className="relative flex">
+                <button
+                  onClick={() => { setIsLogin(true); resetMessages(); }}
+                  className={`flex-1 py-2 text-center font-medium transition-colors duration-300 z-10 ${
+                    isLogin ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => { setIsLogin(false); resetMessages(); }}
+                  className={`flex-1 py-2 text-center font-medium transition-colors duration-300 z-10 ${
+                    !isLogin ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isForgotPassword && !registrationsOpen && (
+            <div className="mb-6 shrink-0">
+              <h2 className="text-2xl font-bold text-gray-800">Sign In</h2>
+              <p className="text-sm text-gray-500 mt-1">Registrations are currently closed by the administrator.</p>
+            </div>
+          )}
 
           {/* Error Message */}
           {(localError || authError) && (
@@ -341,7 +379,7 @@ const Landing = () => {
             </div>
           )}
 
-          {/* Success Message (for Pending Instructors) */}
+          {/* Success Message */}
           {successMessage && (
             <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start text-emerald-800 animate-fade-in-up shrink-0">
               <CheckCircle size={18} className="mr-2 flex-shrink-0 mt-0.5 text-emerald-600" />
@@ -349,13 +387,46 @@ const Landing = () => {
             </div>
           )}
 
-          {/* FIXED: The Form Container is now the scrollable element! */}
+          {/* Form Container */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden form-scrollbar pr-2 -mr-2 pb-2">
             
-            {isLogin ? (
+            {isForgotPassword ? (
+              // ✨ NEW: Forgot Password Form
+              <div className="animate-fade-in flex flex-col h-full justify-center">
+                <button 
+                  onClick={() => { setIsForgotPassword(false); resetMessages(); }}
+                  className="flex items-center text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors mb-6 w-fit"
+                >
+                  <ArrowLeft size={16} className="mr-1" /> Back to Login
+                </button>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
+                <p className="text-sm text-gray-500 mb-6">Enter your email address and we'll send you a link to reset your password.</p>
+                
+                <form onSubmit={handleResetPassword}>
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                      placeholder="name@earist.edu"
+                    />
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] disabled:bg-blue-300 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {loading ? 'Sending Link...' : 'Send Reset Link'}
+                  </button>
+                </form>
+              </div>
+            ) : isLogin ? (
               // Login Form
               <div className="animate-fade-in">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome Back!</h2>
+                {registrationsOpen && <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome Back!</h2>}
                 <form onSubmit={handleSubmit}>
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -387,9 +458,13 @@ const Landing = () => {
                     {loading ? 'Signing in...' : 'Sign In'}
                   </button>
                   <p className="text-center text-sm text-gray-600">
-                    <a href="#" className="text-blue-600 hover:underline transition-colors">
+                    <button 
+                      type="button"
+                      onClick={() => { setIsForgotPassword(true); resetMessages(); }}
+                      className="text-blue-600 hover:underline transition-colors focus:outline-none"
+                    >
                       Forgot password?
-                    </a>
+                    </button>
                   </p>
                 </form>
               </div>
@@ -399,7 +474,6 @@ const Landing = () => {
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">Create Account</h2>
                 <form onSubmit={handleSubmit}>
                   
-                  {/* Custom Role Selector */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Account Role</label>
                     <div className="flex gap-4">
