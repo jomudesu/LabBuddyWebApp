@@ -39,7 +39,7 @@ const SystemSettings = () => {
     announcementBanner: '',
   });
 
-  // ✨ NEW: Tracks the true database state so we can revert if cancelled
+  // Tracks the true database state so we can revert if cancelled
   const [originalPlatformData, setOriginalPlatformData] = useState({
     maintenanceMode: false,
     allowRegistrations: true,
@@ -107,7 +107,7 @@ const SystemSettings = () => {
     setIsSaving(true);
     try {
       await setDoc(doc(db, 'system', 'preferences'), platformData, { merge: true });
-      setOriginalPlatformData(platformData); // ✨ Update the "original" state to the new saved state
+      setOriginalPlatformData(platformData); // Update the "original" state to the new saved state
       showToast('Platform preferences saved successfully!');
     } catch (error) {
       showToast('Error saving settings.');
@@ -192,7 +192,7 @@ const SystemSettings = () => {
               <button 
                 onClick={() => {
                   setIsPlatformConfirmOpen(false);
-                  setPlatformData(originalPlatformData); // ✨ Revert on X click
+                  setPlatformData(originalPlatformData); // Revert on X click
                 }} 
                 className="text-slate-400 hover:text-slate-200"
               >
@@ -215,7 +215,7 @@ const SystemSettings = () => {
                   type="button"
                   onClick={() => {
                     setIsPlatformConfirmOpen(false);
-                    setPlatformData(originalPlatformData); // ✨ Revert on Cancel click
+                    setPlatformData(originalPlatformData); // Revert on Cancel click
                   }}
                   className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition-all border border-slate-700"
                 >
@@ -396,7 +396,7 @@ const SystemSettings = () => {
                     <Globe className="mr-2 text-emerald-400" size={20} /> Platform Preferences
                   </h2>
                   <p className="text-sm text-slate-400 mt-1">Control global access and system-wide announcements.</p>
-                </div>flex text-xs font-bold text-slate-400 uppercase tracking-wider mb-2
+                </div>
                 
                 <div className="p-6 flex-1 space-y-6">
                   <div className="space-y-4 max-w-2xl">
