@@ -396,7 +396,7 @@ const SystemSettings = () => {
                     <Globe className="mr-2 text-emerald-400" size={20} /> Platform Preferences
                   </h2>
                   <p className="text-sm text-slate-400 mt-1">Control global access and system-wide announcements.</p>
-                </div>
+                </div>flex text-xs font-bold text-slate-400 uppercase tracking-wider mb-2
                 
                 <div className="p-6 flex-1 space-y-6">
                   <div className="space-y-4 max-w-2xl">
@@ -416,7 +416,7 @@ const SystemSettings = () => {
                   </div>
 
                   <div className="max-w-2xl border-t border-slate-700/50 pt-6">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
                       <Bell size={14} className="mr-2" /> Global Announcement Banner
                     </label>
                     <textarea 
