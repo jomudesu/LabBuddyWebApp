@@ -5,7 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
-  sendPasswordResetEmail // ✨ NEW: Imported for password resets
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -92,15 +92,28 @@ export const AuthProvider = ({ children }) => {
       
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      const userData = userDocSnap.exists() ? userDocSnap.data() : null;
-      const userRole = userData ? userData.role : 'student';
+      
+      // ✨ SECURITY FIX: If the Firestore document doesn't exist, they were deleted by an admin.
+      if (!userDocSnap.exists()) {
+        await signOut(auth);
+        throw new Error("This account has been removed by an administrator.");
+      }
+
+      const userData = userDocSnap.data();
+      const userRole = userData.role || 'student';
+
+      // ✨ SECURITY FIX: Enforce "disabled" status
+      if (userData.status === 'disabled') {
+        await signOut(auth);
+        throw new Error("Your account has been disabled. Please contact the administrator.");
+      }
 
       if (platformSettings?.maintenanceMode && userRole !== 'admin') {
         await signOut(auth); 
         throw new Error("System is currently undergoing maintenance. Please try again later.");
       }
 
-      if (userData && userData.status === 'pending') {
+      if (userData.status === 'pending') {
         await signOut(auth); 
         throw new Error("Your instructor account is pending admin approval.");
       }
@@ -113,7 +126,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✨ NEW: Password Reset Function
   const resetPassword = async (email) => {
     try {
       setError(null);
@@ -142,18 +154,21 @@ export const AuthProvider = ({ children }) => {
           
           if (userDocSnap.exists()) {
             const customUserData = userDocSnap.data();
-            if (customUserData.status === 'pending') {
+            // ✨ SECURITY FIX: Auto-kick if they are disabled or pending while actively logged in
+            if (customUserData.status === 'pending' || customUserData.status === 'disabled') {
               await signOut(auth);
               setCurrentUser(null);
             } else {
               setCurrentUser({ ...firebaseUser, ...customUserData });
             }
           } else {
-            setCurrentUser(firebaseUser);
+            // ✨ SECURITY FIX: Auto-kick if their Firestore doc was deleted while they were online
+            await signOut(auth);
+            setCurrentUser(null);
           }
         } catch (err) {
           console.error("Error fetching user data/role:", err);
-          setCurrentUser(firebaseUser);
+          setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);
@@ -171,7 +186,7 @@ export const AuthProvider = ({ children }) => {
     error,
     register,
     login,
-    resetPassword, // ✨ NEW: Exported to the app
+    resetPassword, 
     logout
   };
 
