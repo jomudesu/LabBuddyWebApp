@@ -109,17 +109,23 @@ const ManageAccounts = () => {
     try {
       const userRef = doc(db, 'users', editingUser.id);
       
-      // ✨ FIXED: Safely handle the section string to prevent .toUpperCase() crashes on null/undefined
-      let safeSection = '-';
+      // Base payload
+      let updatePayload = {
+        role: editingUser.role,
+        status: editingUser.status || 'active'
+      };
+
+      // ✨ NEW: Handle Sections dynamically based on role
       if (editingUser.role === 'student') {
-        safeSection = (editingUser.section || '').toUpperCase();
+        updatePayload.section = (editingUser.section || '').toUpperCase() || '-';
+      } else if (editingUser.role === 'instructor') {
+        const rawSections = editingUser.handledSections || '';
+        updatePayload.handledSections = Array.isArray(rawSections) 
+          ? rawSections 
+          : rawSections.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
       }
 
-      await updateDoc(userRef, {
-        role: editingUser.role,
-        section: safeSection,
-        status: editingUser.status || 'active'
-      });
+      await updateDoc(userRef, updatePayload);
       
       setIsEditModalOpen(false);
       setEditingUser(null);
@@ -242,7 +248,7 @@ const ManageAccounts = () => {
               </button>
             </div>
             
-            <form onSubmit={handleSaveUser} className="p-6 space-y-4">
+            <form onSubmit={handleSaveUser} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto form-scrollbar">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">User details</label>
                 <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
@@ -264,6 +270,7 @@ const ManageAccounts = () => {
                 </select>
               </div>
 
+              {/* ✨ NEW: Conditionally render input based on role */}
               {editingUser.role === 'student' && (
                 <div className="animate-fade-in">
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Class Section</label>
@@ -274,6 +281,20 @@ const ManageAccounts = () => {
                     placeholder="e.g. BSXX-XX"
                     className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 transition-all font-medium uppercase"
                   />
+                </div>
+              )}
+
+              {editingUser.role === 'instructor' && (
+                <div className="animate-fade-in">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assigned Sections</label>
+                  <input 
+                    type="text" 
+                    value={Array.isArray(editingUser.handledSections) ? editingUser.handledSections.join(', ') : (editingUser.handledSections || '')}
+                    onChange={(e) => setEditingUser({...editingUser, handledSections: e.target.value})}
+                    placeholder="e.g. BSCS-1A, BSIT-2B"
+                    className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 transition-all font-medium uppercase"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Separate multiple sections with commas.</p>
                 </div>
               )}
 
@@ -479,7 +500,7 @@ const ManageAccounts = () => {
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">User</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Section</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Section / Handled</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Joined</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Last Login</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
@@ -506,11 +527,22 @@ const ManageAccounts = () => {
                     <td className="px-6 py-4">
                       {getStatusBadge(user.status || 'active')}
                     </td>
+
+                    {/* ✨ NEW: Conditionally render Student Section or Instructor Handled Sections */}
                     <td className="px-6 py-4">
-                      <span className={`text-sm font-medium ${!user.section || user.section === '-' ? 'text-slate-600' : 'text-slate-300'}`}>
-                        {user.section || '-'}
-                      </span>
+                      {user.role === 'instructor' ? (
+                        <span className="text-sm font-medium text-purple-400">
+                          {user.handledSections && user.handledSections.length > 0 
+                            ? user.handledSections.join(', ') 
+                            : 'Unassigned'}
+                        </span>
+                      ) : (
+                        <span className={`text-sm font-medium ${!user.section || user.section === '-' ? 'text-slate-600' : 'text-slate-300'}`}>
+                          {user.section || '-'}
+                        </span>
+                      )}
                     </td>
+
                     <td className="px-6 py-4 text-sm text-slate-400 font-medium">
                       {user.createdAt}
                     </td>

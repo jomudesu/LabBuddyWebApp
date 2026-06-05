@@ -167,7 +167,9 @@ export const AuthProvider = ({ children }) => {
             setCurrentUser(null);
           }
         } catch (err) {
-          console.error("Error fetching user data/role:", err);
+          if (err.code !== 'permission-denied') {
+            console.error("Error fetching user data/role:", err);
+          }
           setCurrentUser(null);
         }
       } else {

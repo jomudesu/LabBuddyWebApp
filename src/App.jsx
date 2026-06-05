@@ -7,6 +7,7 @@ import { Bell } from 'lucide-react'; // ✨ Added this import for the banner ico
 // Layouts
 import Sidebar from './components/Layout/Sidebar';
 import AdminLayout from './components/Layout/AdminLayout';
+import InstructorLayout from './components/Layout/InstructorLayout';
 
 // Student Pages
 import Landing from './pages/Landing';
@@ -24,6 +25,12 @@ import GlobalInventory from './pages/Admin/GlobalInventory';
 import ReportPrinting from './pages/Admin/ReportPrinting';
 import SystemSettings from './pages/Admin/SystemSettings';
 
+// Instructor Pages
+import InstructorDashboard from './Pages/Instructor/InstructorDashboard';
+import InstructorStudents from './Pages/Instructor/InstructorStudents';
+import InstructorExperiments from './Pages/Instructor/InstructorExperiments';
+import InstructorAnalytics from './Pages/Instructor/InstructorAnalytics';
+
 // ─── ROUTE PROTECTORS ───
 
 const ProtectedRoute = ({ children }) => {
@@ -31,6 +38,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <Navigate to="/" />;
   if (currentUser.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+  if (currentUser.role ===  'instructor') return <Navigate to="/instructor/dashboard" replace />;
   return children;
 };
 
@@ -39,6 +47,16 @@ const AdminRoute = ({ children }) => {
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <Navigate to="/" />;
   if (currentUser.role !== 'admin') return <Navigate to="/dashboard" />; 
+  return children;
+};
+
+const InstructorRoute = ({ children }) => {
+  const { currentUser, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!currentUser) return <Navigate to="/" />;
+  if (currentUser.role !== 'instructor') {
+    return <Navigate to={currentUser.role === 'admin' ? '/admin/dashboard' : '/dashboard'} />;
+  }
   return children;
 };
 
@@ -98,6 +116,11 @@ function AppRoutes() {
       <Route path="/admin/reports" element={<AdminRoute><AdminLayout><ReportPrinting /></AdminLayout></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminLayout><SystemSettings /></AdminLayout></AdminRoute>} />
       
+      {/* ─── INSTRUCTOR ROUTES ─── */}
+      <Route path="/instructor/dashboard" element={<InstructorRoute><InstructorLayout><InstructorDashboard /></InstructorLayout></InstructorRoute>} />
+      <Route path="/instructor/students" element={<InstructorRoute><InstructorLayout><InstructorStudents /></InstructorLayout></InstructorRoute>} />
+      <Route path="/instructor/experiments" element={<InstructorRoute><InstructorLayout><InstructorExperiments /></InstructorLayout></InstructorRoute>} />
+      <Route path="/instructor/analytics" element={<InstructorRoute><InstructorLayout><InstructorAnalytics /></InstructorLayout></InstructorRoute>} />
     </Routes>
   );
 }
