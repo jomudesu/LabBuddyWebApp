@@ -3,60 +3,96 @@ import {
   Search, 
   Filter, 
   FlaskConical, 
-  ChevronRight, 
   LayoutGrid,
   BookOpen,
   Activity,
-  BarChart3
+  CheckCircle2,
+  Minus,
+  X,
+  Users
 } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../backend/Firebase/firebase';
+import { useAuth } from '../../backend/Firebase/AuthContext';
 
 const InstructorExperiments = () => {
+  const { currentUser } = useAuth();
+  
+  // ─── STATE MANAGEMENT ───
   const [experiments, setExperiments] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
-  // ─── FETCH PUBLISHED EXPERIMENTS ───
+  // Modal State
+  const [selectedExp, setSelectedExp] = useState(null);
+
+  const instructorSections = useMemo(() => {
+    return currentUser?.handledSections || [];
+  }, [currentUser]);
+
+  // ─── FETCH ALL REQUIRED DATA ───
   useEffect(() => {
-    // Fetch ALL experiments to bypass Firestore's strict case-sensitivity
-    const q = collection(db, 'experiment');
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedExperiments = [];
-      snapshot.forEach((doc) => {
+    if (instructorSections.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // 1. Fetch Published Experiments
+    const unsubExp = onSnapshot(collection(db, 'experiment'), (snap) => {
+      const fetchedExp = [];
+      snap.forEach(doc => {
         const data = doc.data();
-        
-        // Case-insensitive frontend filter
-        if (data.status && data.status.toLowerCase() === 'published') {
-          fetchedExperiments.push({
-            id: doc.id,
-            ...data
-          });
+        if (data.status?.toLowerCase() === 'published') {
+          fetchedExp.push({ id: doc.id, ...data });
         }
       });
-      
-      // Sort alphabetically by title
-      fetchedExperiments.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-      setExperiments(fetchedExperiments);
+      fetchedExp.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      setExperiments(fetchedExp);
+    });
+
+    // 2. Fetch My Students
+    const qStudents = query(collection(db, 'users'), where('role', '==', 'student'));
+    const unsubStudents = onSnapshot(qStudents, (snap) => {
+      const fetchedStudents = [];
+      snap.forEach(doc => {
+        const data = doc.data();
+        // Only keep students in the instructor's assigned sections
+        if (instructorSections.includes(data.section)) {
+          fetchedStudents.push({ id: doc.id, ...data });
+        }
+      });
+      fetchedStudents.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+      setStudents(fetchedStudents);
+    });
+
+    // 3. Fetch Completed Progress
+    const qProgress = query(collection(db, 'userProgress'), where('status', '==', 'completed'));
+    const unsubProgress = onSnapshot(qProgress, (snap) => {
+      const fetchedProg = [];
+      snap.forEach(doc => fetchedProg.push({ id: doc.id, ...doc.data() }));
+      setProgress(fetchedProg);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      unsubExp();
+      unsubStudents();
+      unsubProgress();
+    };
+  }, [instructorSections]);
 
-  // ─── EXTRACT DYNAMIC CATEGORIES ───
+  // ─── EXTRACT CATEGORIES ───
   const availableCategories = useMemo(() => {
-    const categories = experiments
-      .map(e => e.category)
-      .filter(Boolean); // Remove undefined/null
+    const categories = experiments.map(e => e.category).filter(Boolean);
     return ['All', ...new Set(categories)].sort();
   }, [experiments]);
 
-  // ─── FILTERING ENGINE ───
+  // ─── FILTER EXPERIMENTS ───
   const processedExperiments = useMemo(() => {
     return experiments.filter(exp => {
       const safeTitle = (exp.title || '').toLowerCase();
@@ -70,7 +106,19 @@ const InstructorExperiments = () => {
     });
   }, [experiments, searchQuery, categoryFilter]);
 
-  // ─── UI HELPERS ───
+  // ─── CALCULATION HELPERS ───
+  const getCompletionStats = (experimentId) => {
+    if (students.length === 0) return { completed: 0, total: 0, percentage: 0 };
+    
+    // Count how many of MY students have a completed record for this specific experiment
+    const completedCount = progress.filter(p => 
+      p.experimentId === experimentId && students.some(s => s.id === p.userId)
+    ).length;
+
+    const percentage = Math.round((completedCount / students.length) * 100);
+    return { completed: completedCount, total: students.length, percentage };
+  };
+
   const getDifficultyColor = (difficulty) => {
     switch (difficulty?.toLowerCase()) {
       case 'beginner': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
@@ -81,15 +129,96 @@ const InstructorExperiments = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full flex flex-col h-full animate-fade-in">
+    <div className="p-8 max-w-7xl mx-auto w-full flex flex-col h-full relative animate-fade-in">
       
-      {/* ─── HEADER ─── */}
+      {/* Sleek Scrollbar for Modal */}
+      <style>{`
+        .modal-scrollbar::-webkit-scrollbar { width: 6px; }
+        .modal-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .modal-scrollbar::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 10px; }
+        .modal-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #cbd5e1; }
+      `}</style>
+
+      {/* ─── ATTENDANCE ROSTER MODAL ─── */}
+      {selectedExp && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[85vh]">
+            
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
+              <div>
+                <h2 className="text-xl font-black text-slate-800 leading-tight pr-4">{selectedExp.title}</h2>
+                <p className="text-sm font-bold text-purple-600 mt-1 uppercase tracking-wider">Attendance Roster</p>
+              </div>
+              <button 
+                onClick={() => setSelectedExp(null)} 
+                className="text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-lg p-1.5 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable List) */}
+            <div className="flex-1 overflow-y-auto modal-scrollbar p-2">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 border-b border-slate-100">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Student Name</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Section</th>
+                    <th className="px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {students.map(student => {
+                    const isCompleted = progress.some(p => p.userId === student.id && p.experimentId === selectedExp.id);
+                    return (
+                      <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="font-bold text-slate-700 text-sm">{student.displayName}</p>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
+                            {student.section}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center">
+                            {isCompleted ? (
+                              <div className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded flex items-center text-xs font-bold border border-emerald-100">
+                                <CheckCircle2 size={14} className="mr-1.5" /> Done
+                              </div>
+                            ) : (
+                              <div className="bg-slate-50 text-slate-400 px-2.5 py-1 rounded flex items-center text-xs font-bold border border-slate-100">
+                                <Minus size={14} className="mr-1.5" /> Pending
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {students.length === 0 && (
+                    <tr>
+                      <td colSpan="3" className="text-center py-8 text-slate-400 text-sm font-medium">
+                        No students assigned to your sections.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ─── PAGE HEADER ─── */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center">
             <FlaskConical className="mr-3 text-purple-600" size={32} /> Experiment Tracking
           </h1>
-          <p className="text-slate-500 font-medium mt-1">Browse available lab modules and track your sections' performance.</p>
+          <p className="text-slate-500 font-medium mt-1">Browse available lab modules and view completion attendance.</p>
         </div>
         
         <div className="bg-purple-50 text-purple-700 px-4 py-2 rounded-xl border border-purple-200 font-bold text-sm flex items-center shadow-sm w-fit">
@@ -132,53 +261,74 @@ const InstructorExperiments = () => {
       </div>
 
       {/* ─── EXPERIMENT GRID ─── */}
-      <div className="relative flex-1 min-h-0 overflow-y-auto pr-2 -mr-2 form-scrollbar">
+      <div className="relative flex-1 min-h-0 overflow-y-auto pr-2 -mr-2">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
           </div>
         ) : processedExperiments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 pb-8">
-            {processedExperiments.map((exp) => (
-              <div 
-                key={exp.id} 
-                className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-300 flex flex-col group"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 group-hover:scale-110 group-hover:bg-purple-100 transition-all duration-300 border border-purple-100">
-                    <FlaskConical size={24} />
-                  </div>
-                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${getDifficultyColor(exp.difficulty)}`}>
-                    {exp.difficulty || 'Unrated'}
-                  </span>
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight group-hover:text-purple-700 transition-colors line-clamp-2">
-                    {exp.title || 'Untitled Module'}
-                  </h3>
-                  <p className="text-sm text-slate-500 line-clamp-3 mb-4 leading-relaxed">
-                    {exp.description || 'No description available for this module.'}
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                      <Activity size={12} className="mr-1.5" />
-                      {exp.category || 'General'}
+            {processedExperiments.map((exp) => {
+              const stats = getCompletionStats(exp.id);
+              
+              return (
+                <div 
+                  key={exp.id} 
+                  className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-300 flex flex-col group"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 group-hover:scale-110 group-hover:bg-purple-100 transition-all duration-300 border border-purple-100">
+                      <FlaskConical size={24} />
+                    </div>
+                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${getDifficultyColor(exp.difficulty)}`}>
+                      {exp.difficulty || 'Unrated'}
                     </span>
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight group-hover:text-purple-700 transition-colors line-clamp-2">
+                      {exp.title || 'Untitled Module'}
+                    </h3>
+                    <p className="text-sm text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+                      {exp.description || 'No description available.'}
+                    </p>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-slate-100 space-y-4">
                     
-                    <button 
-                      onClick={() => alert(`Opening analytics for: ${exp.title} (Coming Soon)`)}
-                      className="flex items-center text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors"
-                    >
-                      <BarChart3 size={16} className="mr-1.5" /> Track Class
-                    </button>
+                    {/* Minimal Progress Bar */}
+                    <div>
+                      <div className="flex justify-between text-xs font-bold mb-1.5">
+                        <span className="text-slate-500 uppercase tracking-wider">Class Completion</span>
+                        <span className={stats.percentage === 100 ? 'text-emerald-600' : 'text-purple-600'}>
+                          {stats.completed} / {stats.total}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-1000 ${stats.percentage === 100 ? 'bg-emerald-500' : 'bg-purple-500'}`}
+                          style={{ width: `${stats.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 px-2.5 py-1 rounded border border-slate-100">
+                        <Activity size={12} className="mr-1.5" />
+                        {exp.category || 'General'}
+                      </span>
+                      
+                      <button 
+                        onClick={() => setSelectedExp(exp)}
+                        className="flex items-center text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors shadow-sm shadow-purple-200"
+                      >
+                        <Users size={16} className="mr-2" /> View Roster
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 bg-white border border-slate-200 rounded-2xl shadow-sm text-center p-8">

@@ -11,18 +11,20 @@ import {
 } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../backend/Firebase/firebase';
-import { useAuth } from '../../backend/Firebase/AuthContext'; 
+import { useAuth } from '../../backend/Firebase/AuthContext';
+import { useNavigate } from 'react-router-dom'; 
 
 const InstructorStudents = () => {
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [sectionFilter, setSectionFilter] = useState('All');
 
-  // ✨ NEW: Extract the instructor's assigned sections from their Auth profile
+  // Extract the instructor's assigned sections from their Auth profile
   const instructorSections = useMemo(() => {
     return currentUser?.handledSections || [];
   }, [currentUser]);
@@ -208,7 +210,7 @@ const InstructorStudents = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                        onClick={() => alert(`Linking to ${student.displayName}'s Gradebook... (Coming Soon!)`)}
+                        onClick={() => navigate('/instructor/analytics', { state: { searchTarget: student.displayName } })}
                         className="inline-flex items-center text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors"
                       >
                         View Grades <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />

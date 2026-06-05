@@ -14,6 +14,7 @@ import {
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../backend/Firebase/firebase';
 import { useAuth } from '../../backend/Firebase/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const InstructorAnalytics = () => {
   const { currentUser } = useAuth();
