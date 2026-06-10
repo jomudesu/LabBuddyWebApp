@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -12,7 +12,7 @@ import { useAuth } from '../../backend/Firebase/AuthContext';
 
 const InstructorLayout = ({ children }) => {
   const { currentUser, logout } = useAuth();
-  const location = useLocation();
+  const navigate = useNavigate();
 
   const navLinks = [
     { path: '/instructor/dashboard', icon: LayoutDashboard, label: 'Overview' },
@@ -21,63 +21,92 @@ const InstructorLayout = ({ children }) => {
     { path: '/instructor/analytics', icon: BarChart3, label: 'Grades & Analytics' },
   ];
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-50">
       
       {/* ─── INSTRUCTOR SIDEBAR ─── */}
-      <div className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm shrink-0 z-10">
+      <aside className="w-64 bg-slate-50/5 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col border-r border-slate-100 z-50 relative shrink-0">
         
-        {/* Branding */}
-        <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-          <div className="bg-purple-100 p-2.5 rounded-xl border border-purple-200">
-            <ShieldCheck className="text-purple-600" size={24} />
-          </div>
-          <div>
-            <h1 className="font-extrabold text-slate-800 text-lg tracking-tight leading-tight">Lab Buddy</h1>
-            <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Faculty Portal</p>
+        {/* ─── Branding ─── */}
+        <div className="p-7">
+          <div className="flex items-center cursor-default group mb-1">
+            <div className="bg-purple-50 p-2 rounded-xl mr-3 transition-all duration-300 group-hover:bg-purple-100 group-hover:scale-110 group-hover:rotate-6 group-hover:shadow-sm">
+              <ShieldCheck className="text-purple-600" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-purple-900 tracking-tight leading-none">LAB BUDDY</h1>
+              <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mt-0.5">Faculty Portal</p>
+            </div>
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
-          {navLinks.map((link) => {
-            const isActive = location.pathname.includes(link.path);
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-bold text-sm border
-                  ${isActive 
-                  ? 'bg-purple-50 text-purple-700 border-purple-200 shadow-sm' 
-                  : 'border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-200'
-                }`}
-              >
-                <link.icon size={18} className={isActive ? 'text-purple-600' : 'text-slate-400'} />
-                {link.label}
-              </Link>
-            );
-          })}
-        </div>
+        {/* ─── Navigation ─── */}
+        <nav className="flex-1 px-4 mt-2">
+          {navLinks.map((item, index) => (
+            <NavLink
+              key={index}
+              to={item.path}
+              className={({ isActive }) => `
+                flex items-center px-4 py-3.5 mb-2 rounded-xl transition-all duration-300 group relative overflow-hidden font-medium
+                before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:bg-purple-600 before:rounded-r-md before:transition-transform before:duration-300
+                ${isActive 
+                  ? 'bg-purple-50/80 text-purple-700 shadow-sm border border-purple-100 font-bold before:scale-y-100' 
+                  : 'text-slate-600 hover:bg-white border border-transparent hover:border-slate-200 hover:text-purple-600 hover:shadow-sm before:scale-y-0 group-hover:before:scale-y-100'
+                }
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  <item.icon 
+                    size={20} 
+                    className={`transition-transform duration-300 ${isActive ? 'scale-110 text-purple-600' : 'group-hover:scale-110 group-hover:-rotate-3'}`} 
+                  />
+                  <span className={`ml-3 transition-transform duration-300 ${isActive ? '' : 'group-hover:translate-x-1'}`}>
+                    {item.label}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
 
-        {/* User Profile & Logout */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3 px-2 py-2 mb-3">
-            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
-              {(currentUser?.displayName || 'I').charAt(0).toUpperCase()}
+        {/* ─── User Profile & Logout ─── */}
+        <div className="p-5 border-t border-slate-100 bg-white">
+          
+          {/* Profile Card */}
+          <div className="flex items-center mb-4 group cursor-default">
+            <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-0.5 group-hover:scale-105 shrink-0">
+              {(currentUser?.displayName || currentUser?.email || 'I').charAt(0).toUpperCase()}
             </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-bold text-slate-700 truncate">{currentUser?.displayName || 'Instructor'}</p>
-              <p className="text-xs font-medium text-slate-500 truncate capitalize">{currentUser?.role}</p>
+            <div className="ml-3 overflow-hidden">
+              <p className="text-sm font-bold text-slate-800 truncate transition-colors duration-300 group-hover:text-purple-700">
+                {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Instructor'}
+              </p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 capitalize">
+                {currentUser?.role || 'Instructor'}
+              </p>
             </div>
           </div>
-          <button 
-            onClick={logout}
-            className="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-xl transition-all"
+          
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="group w-full flex items-center justify-center px-4 py-2.5 text-sm font-bold text-red-600 bg-transparent hover:bg-red-50 hover:text-red-700 rounded-xl transition-all duration-300 border border-transparent hover:border-red-100 hover:shadow-sm"
           >
-            <LogOut size={16} /> Sign Out
+            <LogOut size={18} className="mr-2 transition-transform duration-300 group-hover:-translate-x-1" />
+            Sign Out
           </button>
         </div>
-      </div>
+      </aside>
 
       {/* ─── MAIN CONTENT WRAPPER ─── */}
       <div className="flex-1 overflow-auto flex flex-col bg-[#f8fafc]">

@@ -27,6 +27,7 @@ const InstructorExperiments = () => {
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [sectionFilter, setSectionFilter] = useState('All');
 
   // Modal State
   const [selectedExp, setSelectedExp] = useState(null);
@@ -106,17 +107,23 @@ const InstructorExperiments = () => {
     });
   }, [experiments, searchQuery, categoryFilter]);
 
+  // ─── FILTER STUDENTS BY SECTION ───
+  const filteredStudents = useMemo(() => {
+    if (sectionFilter === 'All') return students;
+    return students.filter(student => student.section === sectionFilter);
+  }, [students, sectionFilter]);
+
   // ─── CALCULATION HELPERS ───
   const getCompletionStats = (experimentId) => {
-    if (students.length === 0) return { completed: 0, total: 0, percentage: 0 };
+    if (filteredStudents.length === 0) return { completed: 0, total: 0, percentage: 0 };
     
-    // Count how many of MY students have a completed record for this specific experiment
+    // Count how many of the FILTERED students have a completed record for this specific experiment
     const completedCount = progress.filter(p => 
-      p.experimentId === experimentId && students.some(s => s.id === p.userId)
+      p.experimentId === experimentId && filteredStudents.some(s => s.id === p.userId)
     ).length;
 
-    const percentage = Math.round((completedCount / students.length) * 100);
-    return { completed: completedCount, total: students.length, percentage };
+    const percentage = Math.round((completedCount / filteredStudents.length) * 100);
+    return { completed: completedCount, total: filteredStudents.length, percentage };
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -149,6 +156,9 @@ const InstructorExperiments = () => {
               <div>
                 <h2 className="text-xl font-black text-slate-800 leading-tight pr-4">{selectedExp.title}</h2>
                 <p className="text-sm font-bold text-purple-600 mt-1 uppercase tracking-wider">Attendance Roster</p>
+                {sectionFilter !== 'All' && (
+                  <p className="text-xs font-bold text-slate-500 mt-1">Filtering by Section: {sectionFilter}</p>
+                )}
               </div>
               <button 
                 onClick={() => setSelectedExp(null)} 
@@ -169,7 +179,7 @@ const InstructorExperiments = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {students.map(student => {
+                  {filteredStudents.map(student => {
                     const isCompleted = progress.some(p => p.userId === student.id && p.experimentId === selectedExp.id);
                     return (
                       <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
@@ -197,10 +207,10 @@ const InstructorExperiments = () => {
                       </tr>
                     );
                   })}
-                  {students.length === 0 && (
+                  {filteredStudents.length === 0 && (
                     <tr>
                       <td colSpan="3" className="text-center py-8 text-slate-400 text-sm font-medium">
-                        No students assigned to your sections.
+                        No students found in the selected section.
                       </td>
                     </tr>
                   )}
@@ -227,7 +237,7 @@ const InstructorExperiments = () => {
       </div>
 
       {/* ─── CONTROL BAR ─── */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 relative z-20">
+      <div className="flex flex-col md:flex-row gap-4 mb-6 relative z-20">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-purple-500 transition-colors" size={20} />
           <input 
@@ -239,23 +249,46 @@ const InstructorExperiments = () => {
           />
         </div>
         
-        <div className="relative shrink-0 min-w-[200px]">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <LayoutGrid className="text-slate-400" size={18} />
+        <div className="flex gap-4 overflow-x-auto pb-1 md:pb-0">
+          {/* Section Filter */}
+          <div className="relative shrink-0 min-w-[200px]">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Users className="text-slate-400" size={18} />
+            </div>
+            <select 
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+              className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-medium appearance-none cursor-pointer"
+            >
+              <option value="All">All My Sections</option>
+              {instructorSections.map(section => (
+                <option key={section} value={section}>Section: {section}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+              <Filter className="text-slate-400" size={16} />
+            </div>
           </div>
-          <select 
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-medium appearance-none cursor-pointer"
-          >
-            {availableCategories.map(cat => (
-              <option key={cat} value={cat}>
-                {cat === 'All' ? 'All Categories' : cat}
-              </option>
-            ))}
-          </select>
-          <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-            <Filter className="text-slate-400" size={16} />
+
+          {/* Category Filter */}
+          <div className="relative shrink-0 min-w-[200px]">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <LayoutGrid className="text-slate-400" size={18} />
+            </div>
+            <select 
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all font-medium appearance-none cursor-pointer"
+            >
+              {availableCategories.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat === 'All' ? 'All Categories' : cat}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+              <Filter className="text-slate-400" size={16} />
+            </div>
           </div>
         </div>
       </div>
@@ -300,13 +333,13 @@ const InstructorExperiments = () => {
                     <div>
                       <div className="flex justify-between text-xs font-bold mb-1.5">
                         <span className="text-slate-500 uppercase tracking-wider">Class Completion</span>
-                        <span className={stats.percentage === 100 ? 'text-emerald-600' : 'text-purple-600'}>
+                        <span className={stats.percentage === 100 && stats.total > 0 ? 'text-emerald-600' : 'text-purple-600'}>
                           {stats.completed} / {stats.total}
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full rounded-full transition-all duration-1000 ${stats.percentage === 100 ? 'bg-emerald-500' : 'bg-purple-500'}`}
+                          className={`h-full rounded-full transition-all duration-1000 ${stats.percentage === 100 && stats.total > 0 ? 'bg-emerald-500' : 'bg-purple-500'}`}
                           style={{ width: `${stats.percentage}%` }}
                         />
                       </div>

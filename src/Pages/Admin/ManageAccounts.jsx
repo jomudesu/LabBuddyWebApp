@@ -8,7 +8,6 @@ import {
   GraduationCap, 
   Edit2, 
   Trash2, 
-  UserPlus, 
   MoreVertical,
   LayoutGrid,
   Users,
@@ -111,6 +110,7 @@ const ManageAccounts = () => {
       
       // Base payload
       let updatePayload = {
+        displayName: (editingUser.displayName || '').trim(),
         role: editingUser.role,
         status: editingUser.status || 'active'
       };
@@ -250,11 +250,15 @@ const ManageAccounts = () => {
             
             <form onSubmit={handleSaveUser} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto form-scrollbar">
               <div>
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">User details</label>
-                <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                  <p className="font-bold text-slate-200">{editingUser.displayName}</p>
-                  <p className="text-sm text-slate-400">{editingUser.email}</p>
-                </div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label>
+                <input
+                  type="text"
+                  value={editingUser.displayName || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, displayName: e.target.value })}
+                  placeholder="Enter display name"
+                  className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 transition-all font-medium"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">{editingUser.email}</p>
               </div>
 
               <div>
@@ -376,10 +380,7 @@ const ManageAccounts = () => {
           <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Manage Accounts</h1>
           <p className="text-sm text-slate-400 mt-1 font-medium">View, filter, and manage platform access roles.</p>
         </div>
-        <button className="flex items-center justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95">
-          <UserPlus size={18} className="mr-2" />
-          Register User
-        </button>
+
       </div>
 
       {/* ─── CONTROL BAR ─── */}

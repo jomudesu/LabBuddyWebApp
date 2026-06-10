@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   FlaskConical, 
@@ -14,10 +15,11 @@ import { useAuth } from '../../backend/Firebase/AuthContext';
 
 const InstructorDashboard = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalStudents: 0,
     activeExperiments: 0,
-    totalCompletions: 0 // ✨ Renamed from completionsToday
+    totalCompletions: 0 
   });
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +54,6 @@ const InstructorDashboard = () => {
 
           // 3. Fetch ALL Completions
           if (myStudentIds.length > 0) {
-            // ✨ Removed the startOfToday timestamp filter completely!
             const progressQuery = query(
               collection(db, 'userProgress'),
               where('status', '==', 'completed')
@@ -71,7 +72,7 @@ const InstructorDashboard = () => {
         setStats({
           totalStudents: myStudentCount,
           activeExperiments: activeExperimentsCount,
-          totalCompletions: totalCompletionsCount // ✨ Map to the new state variable
+          totalCompletions: totalCompletionsCount 
         });
       } catch (error) {
         console.error("Error fetching instructor stats:", error);
@@ -123,8 +124,6 @@ const InstructorDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard title="My Students" value={stats.totalStudents} icon={Users} color="blue" />
           <StatCard title="Active Modules" value={stats.activeExperiments} icon={FlaskConical} color="purple" />
-          
-          {/* ✨ Updated Title */}
           <StatCard title="Total Completions" value={stats.totalCompletions} icon={CheckCircle} color="emerald" />
         </div>
       )}
@@ -154,7 +153,10 @@ const InstructorDashboard = () => {
         <div className="flex flex-col gap-4">
           <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest px-1">Quick Actions</h2>
           
-          <button className="p-5 bg-white border border-slate-200 hover:border-purple-300 hover:shadow-md rounded-2xl text-left transition-all group">
+          <button 
+            onClick={() => navigate('/instructor/students')}
+            className="p-5 bg-white border border-slate-200 hover:border-purple-300 hover:shadow-md rounded-2xl text-left transition-all group"
+          >
             <div className="bg-purple-100 w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 mb-3 group-hover:scale-110 transition-transform">
               <Users size={20} />
             </div>
@@ -164,7 +166,10 @@ const InstructorDashboard = () => {
             <p className="text-xs text-slate-500 font-medium">View and organize your assigned student list.</p>
           </button>
 
-          <button className="p-5 bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md rounded-2xl text-left transition-all group">
+          <button 
+            onClick={() => navigate('/instructor/experiments')}
+            className="p-5 bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md rounded-2xl text-left transition-all group"
+          >
             <div className="bg-blue-100 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 mb-3 group-hover:scale-110 transition-transform">
               <FlaskConical size={20} />
             </div>
