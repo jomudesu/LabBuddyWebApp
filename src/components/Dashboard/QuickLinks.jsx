@@ -26,7 +26,6 @@ const QuickLinks = () => {
   const [randomExperiments, setRandomExperiments] = useState([]);
   const { experiments, loading } = useExperiments();
   
-  // NEW: State for "Coming Soon" tool alerts
   const [infoMessage, setInfoMessage] = useState('');
 
   useEffect(() => {
@@ -74,7 +73,7 @@ const QuickLinks = () => {
                       setActiveModal(null);
                       navigate('/experiments', { state: { highlightExpId: exp.id } });
                     }}
-                    className="flex items-start p-3 border rounded-xl hover:shadow-md hover:-translate-y-1 hover:border-blue-300 transition-all duration-300 cursor-pointer group bg-white"
+                    className="flex items-start p-3 border border-transparent rounded-xl hover:shadow-md hover:-translate-y-1 hover:border-blue-300 transition-all duration-300 cursor-pointer group bg-white"
                   >
                     <div className={`w-10 h-10 ${styles.iconBg} rounded-lg flex items-center justify-center mr-3 flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-sm`}>
                       <Beaker size={20} className={`${styles.iconColor}`} />
@@ -101,9 +100,10 @@ const QuickLinks = () => {
               setActiveModal(null);
               navigate('/experiments');
             }}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-2 font-bold"
+            className="w-full bg-blue-600 text-white py-3.5 rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-2 font-bold flex items-center justify-center gap-2 group"
           >
             View All Experiments
+            <ChevronRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
           </button>
         </div>
       )
@@ -121,19 +121,22 @@ const QuickLinks = () => {
               { step: '4', title: 'Take Notes', desc: 'Record observations and save them for later review', icon: '📓' },
               { step: '5', title: 'Track Progress', desc: 'Monitor your completion rate and revisit experiments', icon: '📈' }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-start p-3.5 bg-gray-50 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all duration-300">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm">
-                  <span className="text-blue-600 font-bold text-sm">{item.step}</span>
+              <div 
+                key={idx} 
+                className="flex items-center p-3.5 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:border-blue-200 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 group cursor-default"
+              >
+                <div className="w-10 h-10 bg-white border border-gray-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-md group-hover:border-blue-100">
+                  <span className="text-blue-600 font-black text-sm">{item.step}</span>
                 </div>
-                <div>
-                  <p className="font-bold text-gray-800">{item.title}</p>
-                  <p className="text-sm font-medium text-gray-500">{item.desc}</p>
+                <div className="flex-1">
+                  <p className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{item.title}</p>
+                  <p className="text-sm font-medium text-gray-500 mt-0.5">{item.desc}</p>
                 </div>
-                <span className="ml-auto text-2xl">{item.icon}</span>
+                <span className="ml-2 text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">{item.icon}</span>
               </div>
             ))}
           </div>
-          <div className="bg-blue-50 rounded-xl p-4 mt-2 border border-blue-100 shadow-sm">
+          <div className="bg-blue-50 rounded-xl p-4 mt-2 border border-blue-100 shadow-sm hover:shadow-md transition-shadow duration-300">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle size={18} className="text-blue-600 animate-pulse" />
               <p className="font-bold text-blue-800 text-sm">Pro Tip</p>
@@ -149,24 +152,26 @@ const QuickLinks = () => {
       content: (
         <div className="space-y-4">
           <p className="text-gray-600 font-medium text-sm">Click on any element to view its properties:</p>
-          <div className="grid grid-cols-8 gap-1.5 text-xs">
+          <div className="grid grid-cols-8 gap-2 text-xs">
             {[
               'H', 'He',
               'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne',
               'Na', 'Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar',
-              'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr'
+              'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr'
             ].map((element, idx) => (
               <button
                 key={idx}
-                // FIXED: Hooked up to the new infoMessage state!
-                onClick={() => setInfoMessage(`${element}\n\nAtomic properties coming soon!`)}
-                className="p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-300 text-center font-mono font-bold"
+                onClick={() => {
+                  setActiveModal(null);
+                  navigate('/periodic-table', { state: { selectedElement: element } });
+                }}
+                className="p-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-center font-black font-mono"
               >
                 {element}
               </button>
             ))}
           </div>
-          <div className="bg-purple-50 rounded-xl p-4 mt-2 border border-purple-100 shadow-sm">
+          <div className="bg-purple-50 rounded-xl p-4 mt-4 border border-purple-100 shadow-sm hover:shadow-md transition-shadow duration-300">
             <div className="flex items-center gap-2 mb-3">
               <Atom size={18} className="text-purple-600" />
               <p className="font-bold text-purple-800 text-sm">Element Groups</p>
@@ -179,10 +184,13 @@ const QuickLinks = () => {
             </div>
           </div>
           <button 
-            // FIXED: Hooked up to the new infoMessage state!
-            onClick={() => setInfoMessage('Full interactive periodic table coming soon!')}
-            className="w-full bg-purple-600 text-white font-bold py-3 rounded-xl hover:bg-purple-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+            onClick={() => {
+              setActiveModal(null);
+              navigate('/periodic-table');
+            }}
+            className="w-full bg-purple-600 text-white font-bold py-3.5 rounded-xl shadow-md shadow-purple-200 hover:bg-purple-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-4 flex items-center justify-center gap-2 group"
           >
+            <Atom size={18} className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" />
             Open Full Periodic Table
           </button>
         </div>
@@ -256,7 +264,6 @@ const QuickLinks = () => {
       )}
 
       {/* ─── CUSTOM INFO MODAL ─── */}
-      {/* Notice z-[200] so it pops above the currently open generic Modal! */}
       {infoMessage && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden scale-100 animate-fade-in-up">

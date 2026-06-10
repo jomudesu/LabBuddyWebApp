@@ -35,15 +35,13 @@ const SystemSettings = () => {
 
   const [platformData, setPlatformData] = useState({
     maintenanceMode: false,
-    allowRegistrations: true,
-    announcementBanner: '',
+    allowRegistrations: true
   });
 
   // Tracks the true database state so we can revert if cancelled
   const [originalPlatformData, setOriginalPlatformData] = useState({
     maintenanceMode: false,
-    allowRegistrations: true,
-    announcementBanner: '',
+    allowRegistrations: true
   });
 
   // Modal States
@@ -66,8 +64,14 @@ const SystemSettings = () => {
         const settingsRef = doc(db, 'system', 'preferences');
         const settingsSnap = await getDoc(settingsRef);
         if (settingsSnap.exists()) {
-          setPlatformData(settingsSnap.data());
-          setOriginalPlatformData(settingsSnap.data()); // Store original state
+          const data = settingsSnap.data();
+          // Extract only the fields we still care about
+          const currentSettings = {
+            maintenanceMode: data.maintenanceMode || false,
+            allowRegistrations: data.allowRegistrations !== false // defaults to true
+          };
+          setPlatformData(currentSettings);
+          setOriginalPlatformData(currentSettings); // Store original state
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
@@ -106,6 +110,7 @@ const SystemSettings = () => {
     setIsPlatformConfirmOpen(false);
     setIsSaving(true);
     try {
+      // Use merge to avoid overwriting anything else, but strictly save our 2 variables
       await setDoc(doc(db, 'system', 'preferences'), platformData, { merge: true });
       setOriginalPlatformData(platformData); // Update the "original" state to the new saved state
       showToast('Platform preferences saved successfully!');
@@ -395,7 +400,7 @@ const SystemSettings = () => {
                   <h2 className="text-xl font-bold text-slate-100 flex items-center">
                     <Globe className="mr-2 text-emerald-400" size={20} /> Platform Preferences
                   </h2>
-                  <p className="text-sm text-slate-400 mt-1">Control global access and system-wide announcements.</p>
+                  <p className="text-sm text-slate-400 mt-1">Control global access and system-wide settings.</p>
                 </div>
                 
                 <div className="p-6 flex-1 space-y-6">
@@ -413,20 +418,6 @@ const SystemSettings = () => {
                       checked={platformData.allowRegistrations}
                       onChange={(val) => setPlatformData({...platformData, allowRegistrations: val})}
                     />
-                  </div>
-
-                  <div className="max-w-2xl border-t border-slate-700/50 pt-6">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center">
-                      <Bell size={14} className="mr-2" /> Global Announcement Banner
-                    </label>
-                    <textarea 
-                      value={platformData.announcementBanner}
-                      onChange={(e) => setPlatformData({...platformData, announcementBanner: e.target.value})}
-                      placeholder="Enter a message to display at the top of all student dashboards..."
-                      rows="3"
-                      className="w-full p-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 transition-all font-medium resize-none"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-1">Leave blank to hide the banner.</p>
                   </div>
                 </div>
 

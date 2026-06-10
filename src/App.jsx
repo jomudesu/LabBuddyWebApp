@@ -16,6 +16,8 @@ import Experiments from './pages/Experiments';
 import Library from './pages/Library';
 import ExperimentPage from './pages/ExperimentPage';
 import Inventory from './pages/Inventory';
+import SafetyGuide from './components/Tools/SafetyGuide';
+import PeriodicTable from './components/Tools/PeriodicTable';
 
 // Admin Pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -107,7 +109,9 @@ function AppRoutes() {
       <Route path="/library" element={<ProtectedRoute><AuthenticatedLayout><Library /></AuthenticatedLayout></ProtectedRoute>} />
       <Route path="/experiment/:id" element={<ProtectedRoute><ExperimentPage /></ProtectedRoute>} />
       <Route path="/inventory" element={<ProtectedRoute><AuthenticatedLayout><Inventory /></AuthenticatedLayout></ProtectedRoute>} />
-
+      <Route path="/safety-guide" element={<ProtectedRoute><AuthenticatedLayout><SafetyGuide /></AuthenticatedLayout></ProtectedRoute>} />
+      <Route path="/periodic-table" element={<ProtectedRoute><PeriodicTable /></ProtectedRoute>} />
+      
       {/* ─── ADMIN ROUTES ─── */}
       <Route path="/admin/dashboard" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
       <Route path="/admin/accounts" element={<AdminRoute><AdminLayout><ManageAccounts /></AdminLayout></AdminRoute>} />

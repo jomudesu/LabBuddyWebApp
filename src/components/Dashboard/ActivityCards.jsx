@@ -7,7 +7,8 @@ import {
   ChevronRight,
   AlertTriangle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  BookOpen
 } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { useExperiments } from '../../backend/Firebase/useExperiments';
@@ -45,37 +46,47 @@ const ActivityCards = () => {
     })
     .slice(0, 4);
 
-  // Modals for the remaining popup cards
+  // Modals for the popup cards
   const modals = {
     safetyGuide: {
-      title: 'Safety Guide',
+      title: 'Quick Safety Overview',
       content: (
         <div className="space-y-4">
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm hover:shadow-md transition-shadow duration-300">
             <div className="flex items-center">
-              <AlertTriangle className="text-red-500 mr-2 animate-pulse" size={20} />
-              <p className="font-bold text-red-700">Always prioritize safety!</p>
+              <AlertTriangle className="text-red-500 mr-2" size={20} />
+              <p className="font-bold text-red-700">Always prioritize safety protocols!</p>
             </div>
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {[
               { rule: 'Wear appropriate PPE (goggles, gloves, lab coat)', icon: '🥽' },
-              { rule: 'Know the location of safety equipment', icon: '🚨' },
-              { rule: 'Never eat or drink in the lab', icon: '🚫' },
-              { rule: 'Report all accidents immediately', icon: '📢' },
-              { rule: 'Read instructions before starting', icon: '📖' },
-              { rule: 'Dispose of chemicals properly', icon: '🗑️' }
+              { rule: 'Know the location of safety equipment', icon: '🚿' },
+              { rule: 'Never eat or drink in the laboratory', icon: '🚫' },
+              { rule: 'Report all structural accidents immediately', icon: '📢' }
             ].map((item, idx) => (
-              <div key={idx} className="flex items-center p-3.5 bg-gray-50 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-200 transition-all duration-300">
-                <span className="text-2xl mr-4">{item.icon}</span>
-                <p className="text-gray-700 font-medium">{item.rule}</p>
+              <div 
+                key={idx} 
+                className="flex items-center p-3.5 bg-gray-50 rounded-xl border border-gray-100 hover:bg-white hover:border-red-200 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 group cursor-default"
+              >
+                <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center mr-4 border border-gray-100 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 group-hover:shadow-md group-hover:border-red-100">
+                  <span className="text-xl">{item.icon}</span>
+                </div>
+                <p className="text-gray-700 font-medium text-sm group-hover:text-red-700 transition-colors">{item.rule}</p>
               </div>
             ))}
           </div>
           
-          <button className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-2">
-            Download Full Safety Manual (WIP)
+          <button 
+            onClick={() => {
+              setActiveModal(null);
+              navigate('/safety-guide');
+            }}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-md shadow-red-200 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 mt-2 flex items-center justify-center gap-2 group"
+          >
+            <BookOpen size={18} className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-110" /> 
+            Open Full Safety Manual
           </button>
         </div>
       )
@@ -85,7 +96,6 @@ const ActivityCards = () => {
       title: 'Recent Activity',
       content: (
         <div className="space-y-4">
-          
           {userActivities.length > 0 ? (
             <div className="space-y-3">
               {userActivities.map((activity, idx) => (
@@ -134,7 +144,6 @@ const ActivityCards = () => {
     }
   };
 
-  // The focused, 3-card layout
   const activities = [
     { 
       icon: Wrench, 
@@ -192,7 +201,6 @@ const ActivityCards = () => {
           <Activity className="mr-2 text-blue-600" size={24} />
           Activities
         </h3>
-        {/* Exactly 3 cards will fill this grid perfectly */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {activities.map((item, index) => (
             <div
@@ -221,7 +229,7 @@ const ActivityCards = () => {
       </div>
 
       {activeModal && modals[activeModal] && (
-        <Modal isOpen={true} onClose={() => setActiveModal(null)} title={modals[activeModal].title} size="lg">
+        <Modal isOpen={true} onClose={() => setActiveModal(null)} title={modals[activeModal].title} size="md">
           {modals[activeModal].content}
         </Modal>
       )}

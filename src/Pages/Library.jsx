@@ -23,8 +23,8 @@ const Library = () => {
   // Mock Database - Added Lab Inventory as the featured first item!
   const resources = useMemo(() => [
     { id: 'inv', title: 'Lab Inventory Database', type: 'Interactive', icon: Database, color: 'text-teal-600', bg: 'bg-teal-100', route: '/inventory' },
-    { id: 1, title: 'Chemistry Lab Manual', type: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-100' },
-    { id: 2, title: 'Periodic Table Guide', type: 'Interactive', icon: Book, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { id: 1, title: 'Chemistry Lab Manual', type: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-100', },
+    { id: 2, title: 'Periodic Table Guide', type: 'Interactive', icon: Book, color: 'text-blue-600', bg: 'bg-blue-100', route: '/periodic-table' },
     { id: 3, title: 'Safety Procedures', type: 'Video', icon: Video, color: 'text-green-600', bg: 'bg-green-100' },
     { id: 4, title: 'Experiment Templates', type: 'Document', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-100' },
     { id: 5, title: 'Video Tutorials', type: 'Video', icon: Video, color: 'text-orange-600', bg: 'bg-orange-100' },
