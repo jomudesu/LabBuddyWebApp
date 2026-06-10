@@ -18,6 +18,7 @@ import ExperimentPage from './pages/ExperimentPage';
 import Inventory from './pages/Inventory';
 import SafetyGuide from './components/Tools/SafetyGuide';
 import PeriodicTable from './components/Tools/PeriodicTable';
+import ResourceViewer from './pages/ResourceViewer';
 
 // Admin Pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -111,6 +112,7 @@ function AppRoutes() {
       <Route path="/inventory" element={<ProtectedRoute><AuthenticatedLayout><Inventory /></AuthenticatedLayout></ProtectedRoute>} />
       <Route path="/safety-guide" element={<ProtectedRoute><AuthenticatedLayout><SafetyGuide /></AuthenticatedLayout></ProtectedRoute>} />
       <Route path="/periodic-table" element={<ProtectedRoute><PeriodicTable /></ProtectedRoute>} />
+      <Route path="/library/view/:id" element={<ProtectedRoute><AuthenticatedLayout><ResourceViewer /></AuthenticatedLayout></ProtectedRoute>} />
       
       {/* ─── ADMIN ROUTES ─── */}
       <Route path="/admin/dashboard" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />

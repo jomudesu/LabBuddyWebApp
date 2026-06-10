@@ -20,15 +20,15 @@ const Library = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Mock Database - Added Lab Inventory as the featured first item!
+  // Mock Database - All standard resources now route to the ResourceViewer
   const resources = useMemo(() => [
     { id: 'inv', title: 'Lab Inventory Database', type: 'Interactive', icon: Database, color: 'text-teal-600', bg: 'bg-teal-100', route: '/inventory' },
-    { id: 1, title: 'Chemistry Lab Manual', type: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-100', },
+    { id: 1, title: 'Chemistry Lab Manual', type: 'PDF', icon: FileText, color: 'text-red-600', bg: 'bg-red-100', route: '/library/view/1' },
     { id: 2, title: 'Periodic Table Guide', type: 'Interactive', icon: Book, color: 'text-blue-600', bg: 'bg-blue-100', route: '/periodic-table' },
-    { id: 3, title: 'Safety Procedures', type: 'Video', icon: Video, color: 'text-green-600', bg: 'bg-green-100' },
-    { id: 4, title: 'Experiment Templates', type: 'Document', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-100' },
-    { id: 5, title: 'Video Tutorials', type: 'Video', icon: Video, color: 'text-orange-600', bg: 'bg-orange-100' },
-    { id: 6, title: 'Research Papers', type: 'PDF', icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+    { id: 3, title: 'Safety Procedures', type: 'Video', icon: Video, color: 'text-green-600', bg: 'bg-green-100', route: '/library/view/3' },
+    { id: 4, title: 'Experiment Templates', type: 'Document', icon: FileText, color: 'text-purple-600', bg: 'bg-purple-100', route: '/library/view/4' },
+    { id: 5, title: 'Video Tutorials', type: 'Video', icon: Video, color: 'text-orange-600', bg: 'bg-orange-100', route: '/library/view/5' },
+    { id: 6, title: 'Research Papers', type: 'PDF', icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100', route: '/library/view/6' },
   ], []);
 
   // ─── DYNAMIC DATA EXTRACTION ───
