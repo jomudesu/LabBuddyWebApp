@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -22,7 +22,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ─── LISTEN TO GLOBAL PLATFORM SETTINGS ───
+  // ✨ Ref to securely suspend the auth listener during registration
+  const isRegisteringRef = useRef(false);
+
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'system', 'preferences'), (docSnap) => {
       if (docSnap.exists()) {
@@ -34,7 +36,6 @@ export const AuthProvider = ({ children }) => {
     return unsub;
   }, []);
 
-  // ─── AUTO-KICK IF MAINTENANCE MODE ACTIVATES ───
   useEffect(() => {
     if (platformSettings?.maintenanceMode && currentUser && currentUser.role !== 'admin') {
       signOut(auth).then(() => {
@@ -45,6 +46,9 @@ export const AuthProvider = ({ children }) => {
 
 
   const register = async (email, password, displayName, role, section) => {
+    // Suspend the listener immediately to block ghost-routing
+    isRegisteringRef.current = true; 
+    
     try {
       setError(null);
       if (platformSettings && !platformSettings.allowRegistrations) {
@@ -62,25 +66,29 @@ export const AuthProvider = ({ children }) => {
         displayName: displayName,
         role: role || 'student',
         section: section || '-',
-        status: role === 'instructor' ? 'pending' : 'active', 
+        status: 'pending', 
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
       };
 
       await setDoc(doc(db, 'users', user.uid), userData);
       
-      if (role === 'instructor') {
-        await signOut(auth);
-        setCurrentUser(null);
-        return { status: 'pending' };
-      }
+      // Force sign-out before the listener is allowed to wake up
+      await signOut(auth);
+      setCurrentUser(null);
 
-      setCurrentUser({ ...user, ...userData });
-      return userCredential;
+      // ✨ FIX: Delay lifting the shield for 2 seconds to absorb ALL delayed Firebase microtasks!
+      setTimeout(() => {
+        isRegisteringRef.current = false;
+      }, 2000);
+
+      return { status: 'pending' };
+
     } catch (err) {
+      isRegisteringRef.current = false;
       setError(err.message);
       throw err;
-    }
+    } 
   };
 
   const login = async (email, password) => {
@@ -93,7 +101,6 @@ export const AuthProvider = ({ children }) => {
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
       
-      // ✨ SECURITY FIX: If the Firestore document doesn't exist, they were deleted by an admin.
       if (!userDocSnap.exists()) {
         await signOut(auth);
         throw new Error("This account has been removed by an administrator.");
@@ -102,7 +109,6 @@ export const AuthProvider = ({ children }) => {
       const userData = userDocSnap.data();
       const userRole = userData.role || 'student';
 
-      // ✨ SECURITY FIX: Enforce "disabled" status
       if (userData.status === 'disabled') {
         await signOut(auth);
         throw new Error("Your account has been disabled. Please contact the administrator.");
@@ -113,9 +119,13 @@ export const AuthProvider = ({ children }) => {
         throw new Error("System is currently undergoing maintenance. Please try again later.");
       }
 
+      // Check pending status securely on login
       if (userData.status === 'pending') {
         await signOut(auth); 
-        throw new Error("Your instructor account is pending admin approval.");
+        const errorMsg = userRole === 'instructor' 
+          ? "Your Instructor account is pending admin approval." 
+          : `Your student account is pending Admin verification for Section: ${userData.section || '-'}`;
+        throw new Error(errorMsg);
       }
 
       await setDoc(userDocRef, { lastLogin: serverTimestamp() }, { merge: true });
@@ -147,6 +157,9 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // If the shield is up, ignore everything Firebase Auth says!
+      if (isRegisteringRef.current) return;
+
       if (firebaseUser) {
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
@@ -154,7 +167,6 @@ export const AuthProvider = ({ children }) => {
           
           if (userDocSnap.exists()) {
             const customUserData = userDocSnap.data();
-            // ✨ SECURITY FIX: Auto-kick if they are disabled or pending while actively logged in
             if (customUserData.status === 'pending' || customUserData.status === 'disabled') {
               await signOut(auth);
               setCurrentUser(null);
@@ -162,7 +174,6 @@ export const AuthProvider = ({ children }) => {
               setCurrentUser({ ...firebaseUser, ...customUserData });
             }
           } else {
-            // ✨ SECURITY FIX: Auto-kick if their Firestore doc was deleted while they were online
             await signOut(auth);
             setCurrentUser(null);
           }
