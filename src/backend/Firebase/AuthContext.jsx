@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
           await supabase.from('users').update({ requires_password_change: false }).eq('id', user.uid);
           await sendPasswordResetEmail(auth, email);
           await signOut(auth);
-          throw new Error(`FIRST_LOGIN_RESET: Account verified! For your security, you must set a permanent password. A secure reset link has been sent to ${email}.`);
+          throw new Error(`FIRST_LOGIN_RESET: Account verified! For your security, you must set a permanent password. A secure reset link has been sent to ${email}. Don't forget to check your spam folder too!`);
         } catch (resetErr) {
           if (resetErr.message.startsWith("FIRST_LOGIN_RESET:")) throw resetErr;
           await signOut(auth);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Filter, X, Shield, User, GraduationCap, Edit2, Trash2, 
   LayoutGrid, Users, CalendarDays, Clock, CheckCircle, AlertCircle, 
-  AlertTriangle, Plus, UserPlus, Unlock
+  AlertTriangle, Plus, UserPlus, Unlock 
 } from 'lucide-react';
 import { supabase } from '../../backend/Firebase/firebase'; 
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -16,6 +16,7 @@ const ManageAccounts = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ role: 'All', section: 'All', status: 'All', sortBy: 'default' });
 
+  // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -24,6 +25,11 @@ const ManageAccounts = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Unlock Modal State
+  const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
+  const [userToUnlock, setUserToUnlock] = useState(null);
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   const [createFormData, setCreateFormData] = useState({
     email: '', password: '', displayName: '', role: 'student', section: '', handledSections: '', status: 'active'
@@ -86,7 +92,6 @@ const ManageAccounts = () => {
 
       await firebaseSignOut(secondaryAuth);
 
-      // Added requires_password_change: true
       let payload = {
         id: newUid,
         display_name: createFormData.displayName.trim(),
@@ -134,15 +139,19 @@ const ManageAccounts = () => {
     fetchUsers();
   };
 
-  const handleResetDevices = async (userId, userName) => {
-    if (window.confirm(`Reset authorized devices for ${userName}? This will allow them to log in from new computers.`)) {
-      try {
-        await supabase.from('users').update({ known_devices: [] }).eq('id', userId);
-        alert("Devices reset successfully!");
-        fetchUsers();
-      } catch (error) {
-        alert("Failed to reset devices.");
-      }
+  // Custom Confirm Unlock Function
+  const confirmUnlock = async () => {
+    if (!userToUnlock) return;
+    setIsUnlocking(true);
+    try {
+      await supabase.from('users').update({ known_devices: [] }).eq('id', userToUnlock.id);
+      setIsUnlockModalOpen(false);
+      setUserToUnlock(null);
+      fetchUsers();
+    } catch (error) {
+      alert("Failed to reset devices.");
+    } finally {
+      setIsUnlocking(false);
     }
   };
 
@@ -223,6 +232,7 @@ const ManageAccounts = () => {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto flex flex-col h-full relative">
       
+      {/* ─── MODALS ─── */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
@@ -235,10 +245,9 @@ const ManageAccounts = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Temporary Password</label>
                 <input required type="password" minLength="6" value={createFormData.password} onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })} placeholder="Min. 6 characters" className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" />
-                {/* ✨ NEW: Admin UI Hint */}
                 <p className="text-[10px] text-amber-500 mt-1 font-medium">User will be forced to change this password on their first login.</p>
               </div>
-              <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input required type="text" value={createFormData.displayName} onChange={(e) => setCreateFormData({ ...createFormData, displayName: e.target.value })} placeholder="Surname, First Name, Middle Initial" className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" /></div>
+              <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input required type="text" value={createFormData.displayName} onChange={(e) => setCreateFormData({ ...createFormData, displayName: e.target.value })} placeholder="Full Name" className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" /></div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label><select value={createFormData.role} onChange={(e) => setCreateFormData({...createFormData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
               {createFormData.role === 'student' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Class Section</label><input type="text" value={createFormData.section} onChange={(e) => setCreateFormData({...createFormData, section: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCHe-XX"/></div>)}
               {createFormData.role === 'instructor' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assigned Sections</label><input type="text" value={createFormData.handledSections} onChange={(e) => setCreateFormData({...createFormData, handledSections: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCS-1A, BSCS-2A"/><p className="text-[10px] text-slate-500 mt-1">Separate with commas.</p></div>)}
@@ -249,7 +258,6 @@ const ManageAccounts = () => {
         </div>
       )}
 
-      {/* ─── EDIT MODAL ─── */}
       {isEditModalOpen && editingUser && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
@@ -269,7 +277,29 @@ const ManageAccounts = () => {
         </div>
       )}
 
-      {/* ─── DELETE MODAL ─── */}
+      {/* ✨ UNLOCK DEVICES MODAL */}
+      {isUnlockModalOpen && userToUnlock && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border border-orange-500/30 w-full max-w-md rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.15)] overflow-hidden animate-fade-in-up">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-500/20">
+                <Unlock className="text-orange-500" size={32} />
+              </div>
+              <h2 className="text-xl font-bold text-slate-100 mb-2">Reset Devices?</h2>
+              <p className="text-slate-400 text-sm mb-6">
+                Allow <strong className="text-slate-200">{userToUnlock.displayName}</strong> to log in from new computers? This will clear their saved device history.
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setIsUnlockModalOpen(false); setUserToUnlock(null); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl border border-slate-700 transition-colors">Cancel</button>
+                <button onClick={confirmUnlock} disabled={isUnlocking} className="flex-1 py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-900/20 disabled:opacity-50 transition-colors">
+                  {isUnlocking ? 'Resetting...' : 'Reset Devices'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isDeleteModalOpen && userToDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-900 border border-rose-500/30 w-full max-w-md rounded-2xl shadow-[0_0_40px_rgba(225,29,72,0.15)] overflow-hidden animate-fade-in-up">
@@ -280,6 +310,7 @@ const ManageAccounts = () => {
         </div>
       )}
 
+      {/* ─── MAIN UI ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div><h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Manage Accounts</h1><p className="text-sm text-slate-400 mt-1 font-medium">View, filter, and manage platform access roles.</p></div>
         <button 
@@ -327,14 +358,18 @@ const ManageAccounts = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100">
                       {user.status === 'pending' && <button onClick={() => handleApprove(user.id)} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"><CheckCircle size={18} /></button>}
+                      
                       <button onClick={() => { setEditingUser(user); setIsEditModalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg"><Edit2 size={18} /></button>
+                      
+                      {/* ✨ CUSTOM UNLOCK BUTTON (Opens custom modal instead of plain alert) */}
                       <button 
-                        onClick={() => handleResetDevices(user.id, user.displayName)} 
-                        className="p-2 text-slate-400 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg"
+                        onClick={() => { setUserToUnlock(user); setIsUnlockModalOpen(true); }} 
+                        className="p-2 text-slate-400 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
                         title="Reset Authorized Devices"
                       >
                         <Unlock size={18} />
                       </button>
+
                       <button onClick={() => { setUserToDelete(user); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"><Trash2 size={18} /></button>
                     </div>
                   </td>

@@ -4,13 +4,14 @@ import {
   Beaker, FlaskRound as Flask, Atom, Shield, ChevronRight, 
   ChevronDown, ChevronUp, BookOpen, AlertCircle, Sparkles,
   Microscope, TestTube, Brain, Wrench, ArrowLeft, ShieldCheck, Check,
-  CheckCircle, ShieldAlert
+  CheckCircle, ShieldAlert, KeyRound, Mail
 } from 'lucide-react';
 import { useAuth } from '../backend/Firebase/AuthContext';
 import { supabase } from '../backend/Firebase/firebase';
+import emailjs from '@emailjs/browser';
 
 const Landing = () => {
-  const { login, resetPassword, error: authError, platformSettings } = useAuth();
+  const { login, resetPassword, error: authError, platformSettings, logout } = useAuth(); // Added logout
   
   const [isForgotPassword, setIsForgotPassword] = useState(false); 
   const [email, setEmail] = useState('');
@@ -19,13 +20,20 @@ const Landing = () => {
   
   const [localError, setLocalError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [securityLockMessage, setSecurityLockMessage] = useState('');
+  const [securityLockMessage, setSecurityLockMessage] = useState(''); 
   
   const [loading, setLoading] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
   
   const [showDPAModal, setShowDPAModal] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
+
+  // OTP MFA STATES
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [generatedOTP, setGeneratedOTP] = useState('');
+  const [pendingRoutingRole, setPendingRoutingRole] = useState(null);
 
   const [shouldScroll, setShouldScroll] = useState(false);
   const bannerContainerRef = useRef(null);
@@ -34,9 +42,16 @@ const Landing = () => {
   const navigate = useNavigate();
 
   const isMaintenanceMode = platformSettings?.maintenanceMode === true && platformSettings?.announcementBanner?.length > 0;
-
   const displayError = localError || (authError && !authError.startsWith("FIRST_LOGIN_RESET:") && !authError.startsWith("SECURITY_LOCK:") ? authError : '');
 
+  // Cooldown Timer
+  useEffect(() => {
+    let timer;
+    if (resetCooldown > 0) timer = setInterval(() => setResetCooldown((prev) => prev - 1), 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldown]);
+
+  // Marquee Check
   useEffect(() => {
     const checkWidth = () => {
       if (isMaintenanceMode && bannerContainerRef.current && bannerTextRef.current) {
@@ -45,12 +60,12 @@ const Landing = () => {
         setShouldScroll(textWidth > containerWidth);
       }
     };
-    
     checkWidth();
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
   }, [isMaintenanceMode, platformSettings?.announcementBanner]);
 
+  // Scrolling logic
   useEffect(() => {
     const handleScroll = () => {
       if (scrollContainerRef.current) {
@@ -67,16 +82,19 @@ const Landing = () => {
   const resetMessages = () => {
     setLocalError('');
     setSuccessMessage('');
-    setSecurityLockMessage('');
+    setSecurityLockMessage(''); 
   };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    if (resetCooldown > 0) return; 
+
     resetMessages();
     setLoading(true);
     try {
       await resetPassword(resetEmail);
-      setSuccessMessage('Password reset link sent! Please check your inbox.');
+      setSuccessMessage('Secure reset link sent! Please check your inbox.');
+      setResetCooldown(60); 
       setResetEmail('');
     } catch (err) {
       setLocalError(err.message);
@@ -91,24 +109,42 @@ const Landing = () => {
     else navigate('/dashboard');
   };
 
+  // ─── LOGIN & OTP LOGIC ───
   const handleSubmit = async (e) => {
     e.preventDefault();
     resetMessages();
     setLoading(true);
 
     try {
+      // 1. Authenticate Password & Credentials first
       const response = await login(email, password);
       const { userData } = response;
       
-      if (userData.role !== 'admin' && !userData.has_accepted_dpa) {
+      // 2. Generate a random 6-digit OTP
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOTP(code);
+      setPendingRoutingRole(userData.role);
+
+      // 3. Send OTP via EmailJS
+      // ⚠️ IMPORTANT: Replace these 3 strings with your actual EmailJS IDs!
+      const EMAILJS_SERVICE_ID = 'service_klx965k'; 
+      const EMAILJS_TEMPLATE_ID = 'template_lfl0gw7'; 
+      const EMAILJS_PUBLIC_KEY = 'E8urjnzgRBoIBC6Og'; 
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        to_email: email,
+        to_name: userData.displayName,
+        otp_code: code
+      }, EMAILJS_PUBLIC_KEY);
+
+      // 4. Switch UI to OTP mode (Hold them back from dashboard)
+      if (!userData.has_accepted_dpa && userData.role !== 'admin') {
         setPendingUser(userData);
-        setShowDPAModal(true);
-        setLoading(false);
-      } else {
-        routeUser(userData.role);
       }
+      setShowOTP(true);
+      setSuccessMessage(`A 6-digit security code has been sent to ${email}.`);
+
     } catch (err) {
-      // ✨ CATCH THE SECURITY LOCK OR FIRST_LOGIN
       if (err.message.startsWith("FIRST_LOGIN_RESET:")) {
         setSuccessMessage(err.message.replace("FIRST_LOGIN_RESET:", "").trim());
       } else if (err.message.startsWith("SECURITY_LOCK:")) {
@@ -116,8 +152,37 @@ const Landing = () => {
       } else {
         setLocalError(err.message || 'An unexpected error occurred.');
       }
+    } finally {
       setLoading(false);
     }
+  };
+
+  // ✨ Verify the OTP input
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setLocalError('');
+    
+    if (otpInput === generatedOTP) {
+      // Success! Route them or show DPA
+      if (pendingUser) {
+        setShowOTP(false);
+        setShowDPAModal(true);
+      } else {
+        routeUser(pendingRoutingRole);
+      }
+    } else {
+      setLocalError("Invalid verification code. Please try again.");
+      setOtpInput('');
+    }
+  };
+
+  // ✨ Cancel OTP (Abort Login)
+  const cancelOTP = async () => {
+    await logout(); // Kick them out of Firebase Auth since they aborted
+    setShowOTP(false);
+    setOtpInput('');
+    setGeneratedOTP('');
+    resetMessages();
   };
 
   const handleAcceptDPA = async () => {
@@ -161,31 +226,17 @@ const Landing = () => {
     <div className="flex flex-col h-screen relative bg-slate-900">
       
       <style>{`
-        .animate-marquee {
-          display: inline-block;
-          white-space: nowrap;
-          animation: marquee-scroll 25s linear infinite;
-        }
-        @keyframes marquee-scroll {
-          0%   { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
-        }
+        .animate-marquee { display: inline-block; white-space: nowrap; animation: marquee-scroll 25s linear infinite; }
+        @keyframes marquee-scroll { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+        .otp-input { letter-spacing: 0.75em; font-variant-numeric: tabular-nums; }
       `}</style>
 
       {isMaintenanceMode && (
         <div className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white py-3 px-6 flex items-center shadow-lg z-50">
-          <div className="flex items-center gap-3 mr-4">
-             <div className="bg-white/20 p-1.5 rounded-full"><Wrench size={16} /></div>
-             <span className="font-bold text-xs uppercase tracking-widest opacity-95">Maintenance Notice</span>
-          </div>
+          <div className="flex items-center gap-3 mr-4"><div className="bg-white/20 p-1.5 rounded-full"><Wrench size={16} /></div><span className="font-bold text-xs uppercase tracking-widest opacity-95">Maintenance Notice</span></div>
           <div className="h-6 w-px bg-white/30 mr-6" />
           <div ref={bannerContainerRef} className="flex-1 overflow-hidden whitespace-nowrap flex items-center relative">
-            <div 
-              ref={bannerTextRef} 
-              className={`font-bold text-sm ${shouldScroll ? 'animate-marquee' : 'w-full text-center'}`}
-            >
-              {platformSettings.announcementBanner}
-            </div>
+            <div ref={bannerTextRef} className={`font-bold text-sm ${shouldScroll ? 'animate-marquee' : 'w-full text-center'}`}>{platformSettings.announcementBanner}</div>
           </div>
         </div>
       )}
@@ -193,25 +244,13 @@ const Landing = () => {
       {showDPAModal && (
         <div className="absolute inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-white border border-slate-200 w-full max-w-lg rounded-2xl shadow-2xl p-8 animate-fade-in-up">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100">
-              <ShieldCheck className="text-blue-600" size={32} />
-            </div>
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100"><ShieldCheck className="text-blue-600" size={32} /></div>
             <h2 className="text-2xl font-black text-slate-800 mb-2 text-center">Data Privacy Agreement</h2>
             <p className="text-slate-500 text-sm text-center mb-6">Republic Act No. 10173 (Data Privacy Act of 2012)</p>
-            
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-600 mb-6 h-48 overflow-y-auto leading-relaxed text-justify">
-              By accessing the Lab Buddy platform, you explicitly consent to the collection, processing, and storage of your personal information (including Name, Email, Class Section, and System Activity) by the institution for academic and administrative purposes. 
-              <br/><br/>
-              Your simulation telemetry, grades, and interaction data will be logged to evaluate academic performance and system reliability. This data will be maintained securely and will not be shared with external third parties without your explicit consent, except as required by law.
-              <br/><br/>
-              By clicking "I Agree", you acknowledge that you have read and understood these terms and agree to be bound by our data processing protocols.
+              By accessing the Lab Buddy platform, you explicitly consent to the collection, processing, and storage of your personal information (including Name, Email, Class Section, and System Activity) by the institution for academic and administrative purposes. <br/><br/>Your simulation telemetry, grades, and interaction data will be logged to evaluate academic performance and system reliability. This data will be maintained securely and will not be shared with external third parties without your explicit consent, except as required by law.<br/><br/>By clicking "I Agree", you acknowledge that you have read and understood these terms and agree to be bound by our data processing protocols.
             </div>
-
-            <button 
-              onClick={handleAcceptDPA}
-              disabled={loading}
-              className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:opacity-50"
-            >
+            <button onClick={handleAcceptDPA} disabled={loading} className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:opacity-50">
               {loading ? 'Processing...' : <><Check size={20} className="mr-2"/> I Agree to the Terms</>}
             </button>
           </div>
@@ -219,7 +258,7 @@ const Landing = () => {
       )}
 
       <div className="flex flex-1 overflow-hidden relative bg-gradient-to-br from-blue-600 via-blue-700 to-purple-700">
-        <div ref={scrollContainerRef} className="w-3/5 overflow-y-auto scrollbar-hide relative">
+        <div ref={scrollContainerRef} className="w-3/5 overflow-y-auto scrollbar-hide relative hidden lg:block">
           <div className="relative text-white p-12 overflow-hidden min-h-full flex items-center">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-10 left-10 animate-pulse"><Beaker size={60} className="text-white" /></div>
@@ -228,9 +267,7 @@ const Landing = () => {
             </div>
             <div className="absolute inset-0">
               {[...Array(30)].map((_, i) => (
-                <div key={i} className="absolute w-1.5 h-1.5 bg-white rounded-full opacity-30 animate-float"
-                  style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 5}s`, animationDuration: `${3 + Math.random() * 5}s` }}
-                />
+                <div key={i} className="absolute w-1.5 h-1.5 bg-white rounded-full opacity-30 animate-float" style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 5}s`, animationDuration: `${3 + Math.random() * 5}s` }} />
               ))}
             </div>
 
@@ -265,21 +302,6 @@ const Landing = () => {
                 </div>
               ))}
             </div>
-
-            <h3 className="text-2xl font-bold text-white mt-12 mb-6 flex items-center"><Microscope className="mr-2 text-yellow-300" size={28} />What You'll Experience</h3>
-            <div className="space-y-4">
-              {[
-                { icon: Flask, title: 'Acid-Base Titration', desc: 'Learn about pH indicators and neutralization reactions' },
-                { icon: Atom, title: 'Periodic Table Explorer', desc: 'Interactive element details with properties and uses' },
-                { icon: Shield, title: 'Safety Simulation', desc: 'Practice lab safety in a risk-free environment' }
-              ].map((item, index) => (
-                <div key={index} className="group flex items-center p-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl hover:bg-white/20 transition-all duration-300 hover:border-yellow-300/50 cursor-pointer transform hover:scale-[1.02]">
-                  <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center mr-4 group-hover:rotate-6 transition-transform"><item.icon className="text-white group-hover:scale-110 transition-transform" size={28} /></div>
-                  <div className="flex-1"><h4 className="font-semibold text-white group-hover:text-yellow-300 transition-colors">{item.title}</h4><p className="text-blue-100 text-sm">{item.desc}</p></div>
-                  <ChevronRight className="text-blue-200 group-hover:text-yellow-300 group-hover:translate-x-1 transition-all" size={20} />
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="sticky bottom-8 flex justify-end pr-8 pointer-events-none z-20">
@@ -289,13 +311,10 @@ const Landing = () => {
           </div>
         </div>
 
-        <div className="w-2/5 flex items-center justify-center p-8 relative bg-white overflow-y-auto">
+        <div className="w-full lg:w-2/5 flex items-center justify-center p-8 relative bg-white overflow-y-auto">
           <div className="w-full max-w-sm flex flex-col my-auto py-8">
-            <div className="mb-8">
-              <h2 className="text-3xl font-black text-slate-800 tracking-tight">Sign In</h2>
-              <p className="text-sm text-slate-500 mt-2 font-medium">Please enter your institutional credentials to access your laboratory modules.</p>
-            </div>
-
+            
+            {/* ─── NOTIFICATIONS (Shared across all views) ─── */}
             {displayError && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start text-red-700 animate-shake shadow-sm shrink-0">
                 <AlertCircle size={18} className="mr-2 flex-shrink-0 mt-0.5 text-red-500" />
@@ -310,7 +329,6 @@ const Landing = () => {
               </div>
             )}
 
-            {/* SECURITY LOCK BANNER */}
             {securityLockMessage && (
               <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start text-orange-800 animate-shake shadow-sm shrink-0">
                 <ShieldAlert size={18} className="mr-2 flex-shrink-0 mt-0.5 text-orange-600" />
@@ -318,7 +336,42 @@ const Landing = () => {
               </div>
             )}
 
-            {isForgotPassword ? (
+
+            {/* ─── VIEW 1: OTP MFA SCREEN ─── */}
+            {showOTP ? (
+              <div className="animate-fade-in flex flex-col shrink-0">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-100">
+                  <KeyRound className="text-blue-600" size={32} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-800 mb-2 text-center tracking-tight">Security Check</h2>
+                <p className="text-sm text-slate-500 mb-8 text-center">
+                  To protect your account, please enter the 6-digit code sent to <strong className="text-slate-700">{email}</strong>
+                </p>
+                
+                <form onSubmit={handleVerifyOTP}>
+                  <div className="mb-8">
+                    <input 
+                      type="text" 
+                      required 
+                      maxLength="6"
+                      autoComplete="off"
+                      value={otpInput} 
+                      onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, ''))} 
+                      className="w-full px-4 py-4 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 otp-input text-center text-3xl font-bold placeholder-slate-300 shadow-inner" 
+                      placeholder="••••••" 
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                    Verify & Authenticate
+                  </button>
+                  <button type="button" onClick={cancelOTP} className="w-full mt-4 bg-transparent text-slate-500 py-3 rounded-xl font-bold hover:text-slate-700 hover:bg-slate-100 transition-all">
+                    Cancel Login
+                  </button>
+                </form>
+              </div>
+
+            // ─── VIEW 2: FORGOT PASSWORD ───
+            ) : isForgotPassword ? (
               <div className="animate-fade-in flex flex-col shrink-0">
                 <button onClick={() => { setIsForgotPassword(false); resetMessages(); }} className="flex items-center text-sm font-bold text-slate-400 hover:text-blue-600 transition-colors mb-6 w-fit">
                   <ArrowLeft size={16} className="mr-1" /> Back to Login
@@ -330,13 +383,19 @@ const Landing = () => {
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
                     <input type="email" required value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium text-slate-700" placeholder="name@earist.edu" />
                   </div>
-                  <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:opacity-50">
-                    {loading ? 'Sending Link...' : 'Send Reset Link'}
+                  <button type="submit" disabled={loading || resetCooldown > 0} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:opacity-50">
+                    {loading ? 'Sending Link...' : resetCooldown > 0 ? `Resend Available in ${resetCooldown}s` : 'Send Reset Link'}
                   </button>
                 </form>
               </div>
+
+            // ─── VIEW 3: STANDARD LOGIN ───
             ) : (
               <div className="animate-fade-in shrink-0">
+                <div className="mb-8">
+                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">Sign In</h2>
+                  <p className="text-sm text-slate-500 mt-2 font-medium">Please enter your institutional credentials to access your laboratory modules.</p>
+                </div>
                 <form onSubmit={handleSubmit}>
                   <div className="mb-5">
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
