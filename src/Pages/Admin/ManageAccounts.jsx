@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Filter, X, Shield, User, GraduationCap, Edit2, Trash2, 
   LayoutGrid, Users, CalendarDays, Clock, CheckCircle, AlertCircle, 
-  AlertTriangle, Plus, UserPlus
+  AlertTriangle, Plus, UserPlus, Unlock
 } from 'lucide-react';
 import { supabase } from '../../backend/Firebase/firebase'; 
 import { initializeApp, getApps, getApp } from 'firebase/app';
@@ -86,7 +86,7 @@ const ManageAccounts = () => {
 
       await firebaseSignOut(secondaryAuth);
 
-      // ✨ NEW: Added requires_password_change: true
+      // Added requires_password_change: true
       let payload = {
         id: newUid,
         display_name: createFormData.displayName.trim(),
@@ -132,6 +132,18 @@ const ManageAccounts = () => {
     setUserToDelete(null);
     setIsDeleting(false);
     fetchUsers();
+  };
+
+  const handleResetDevices = async (userId, userName) => {
+    if (window.confirm(`Reset authorized devices for ${userName}? This will allow them to log in from new computers.`)) {
+      try {
+        await supabase.from('users').update({ known_devices: [] }).eq('id', userId);
+        alert("Devices reset successfully!");
+        fetchUsers();
+      } catch (error) {
+        alert("Failed to reset devices.");
+      }
+    }
   };
 
   const handleSaveEdit = async (e) => {
@@ -226,7 +238,7 @@ const ManageAccounts = () => {
                 {/* ✨ NEW: Admin UI Hint */}
                 <p className="text-[10px] text-amber-500 mt-1 font-medium">User will be forced to change this password on their first login.</p>
               </div>
-              <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input required type="text" value={createFormData.displayName} onChange={(e) => setCreateFormData({ ...createFormData, displayName: e.target.value })} placeholder="Full Name" className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" /></div>
+              <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input required type="text" value={createFormData.displayName} onChange={(e) => setCreateFormData({ ...createFormData, displayName: e.target.value })} placeholder="Surname, First Name, Middle Initial" className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" /></div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label><select value={createFormData.role} onChange={(e) => setCreateFormData({...createFormData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
               {createFormData.role === 'student' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Class Section</label><input type="text" value={createFormData.section} onChange={(e) => setCreateFormData({...createFormData, section: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCHe-XX"/></div>)}
               {createFormData.role === 'instructor' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assigned Sections</label><input type="text" value={createFormData.handledSections} onChange={(e) => setCreateFormData({...createFormData, handledSections: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCS-1A, BSCS-2A"/><p className="text-[10px] text-slate-500 mt-1">Separate with commas.</p></div>)}
@@ -316,6 +328,13 @@ const ManageAccounts = () => {
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100">
                       {user.status === 'pending' && <button onClick={() => handleApprove(user.id)} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"><CheckCircle size={18} /></button>}
                       <button onClick={() => { setEditingUser(user); setIsEditModalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg"><Edit2 size={18} /></button>
+                      <button 
+                        onClick={() => handleResetDevices(user.id, user.displayName)} 
+                        className="p-2 text-slate-400 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg"
+                        title="Reset Authorized Devices"
+                      >
+                        <Unlock size={18} />
+                      </button>
                       <button onClick={() => { setUserToDelete(user); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"><Trash2 size={18} /></button>
                     </div>
                   </td>

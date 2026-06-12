@@ -4,7 +4,7 @@ import {
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  updatePassword // ✨ NEW: Needed to scramble the temporary password
+  updatePassword
 } from 'firebase/auth';
 import { auth, supabase } from './firebase';
 
@@ -20,7 +20,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ─── LISTEN TO SUPABASE SYSTEM PREFERENCES ───
   useEffect(() => {
     const fetchPrefs = async () => {
       const { data } = await supabase.from('system_preferences').select('*').eq('id', 'default').single();
@@ -75,20 +74,13 @@ export const AuthProvider = ({ children }) => {
         throw new Error("This account has been removed by an administrator.");
       }
 
-      // ✨ NEW: FIRST-LOGIN FORCED PASSWORD CHANGE LOGIC
+      // 1. FIRST-LOGIN FORCED PASSWORD CHANGE
       if (userData.requires_password_change) {
         try {
-          // 1. Scramble the password so the admin's temporary one is destroyed forever
           const scrambledPassword = Math.random().toString(36).slice(-10) + "aA1!@"; 
           await updatePassword(user, scrambledPassword);
-
-          // 2. Update Supabase so they don't get blocked next time
           await supabase.from('users').update({ requires_password_change: false }).eq('id', user.uid);
-
-          // 3. Send the reset email
           await sendPasswordResetEmail(auth, email);
-          
-          // 4. Kick them out and throw a special flag to the Landing page
           await signOut(auth);
           throw new Error(`FIRST_LOGIN_RESET: Account verified! For your security, you must set a permanent password. A secure reset link has been sent to ${email}.`);
         } catch (resetErr) {
@@ -98,11 +90,36 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
+      // 2. ZERO-TRUST DEVICE FINGERPRINTING (STOLEN ACCOUNT PROTECTION)
+      // Admins are excluded so you don't lock yourself out of the dashboard while testing!
+      let currentKnownDevices = userData.known_devices || [];
+      let localDeviceId = localStorage.getItem('lab_buddy_device_id');
+
+      // Generate a unique device ID if this browser doesn't have one
+      if (!localDeviceId) {
+        localDeviceId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+        localStorage.setItem('lab_buddy_device_id', localDeviceId);
+      }
+
+      // Check if this is an unrecognized device
+      if (userData.role !== 'admin' && !currentKnownDevices.includes(localDeviceId)) {
+        // If they already have 2 devices registered, BLOCK THE LOGIN.
+        if (currentKnownDevices.length >= 2) {
+          await signOut(auth);
+          throw new Error("SECURITY_LOCK: Unrecognized device detected. To prevent account theft and unauthorized sharing, Lab Buddy limits access to 2 authorized devices. Please contact an Administrator to reset your device authorizations.");
+        } else {
+          // If under the limit, authorize this new device automatically
+          currentKnownDevices.push(localDeviceId);
+        }
+      }
+
+      // 3. MAINTENANCE MODE
       if (freshPrefs?.maintenance_mode && userData.role !== 'admin') {
         await signOut(auth); 
         throw new Error("System is currently undergoing maintenance. Please try again later.");
       }
 
+      // 4. DISABLED / PENDING
       if (userData.status === 'disabled') {
         await signOut(auth);
         throw new Error("Your account has been disabled. Please contact the administrator.");
@@ -116,7 +133,11 @@ export const AuthProvider = ({ children }) => {
         throw new Error(errorMsg);
       }
 
-      await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.uid);
+      // 5. UPDATE LAST LOGIN & SAVE NEW DEVICES
+      await supabase.from('users').update({ 
+        last_login: new Date().toISOString(),
+        known_devices: currentKnownDevices
+      }).eq('id', user.uid);
       
       return { userCredential, userData }; 
     } catch (err) {
@@ -157,7 +178,6 @@ export const AuthProvider = ({ children }) => {
           const freshPrefs = prefsRes.data;
           
           if (customUserData) {
-            // Prevent auto-login if they still require a password change somehow
             if (customUserData.requires_password_change) {
               await signOut(auth);
               setCurrentUser(null);

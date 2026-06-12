@@ -4,7 +4,7 @@ import {
   Beaker, FlaskRound as Flask, Atom, Shield, ChevronRight, 
   ChevronDown, ChevronUp, BookOpen, AlertCircle, Sparkles,
   Microscope, TestTube, Brain, Wrench, ArrowLeft, ShieldCheck, Check,
-  CheckCircle // ✨ NEW: Import CheckCircle for the success box
+  CheckCircle, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../backend/Firebase/AuthContext';
 import { supabase } from '../backend/Firebase/firebase';
@@ -16,8 +16,11 @@ const Landing = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [resetEmail, setResetEmail] = useState(''); 
+  
   const [localError, setLocalError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [securityLockMessage, setSecurityLockMessage] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(false);
   
@@ -31,6 +34,8 @@ const Landing = () => {
   const navigate = useNavigate();
 
   const isMaintenanceMode = platformSettings?.maintenanceMode === true && platformSettings?.announcementBanner?.length > 0;
+
+  const displayError = localError || (authError && !authError.startsWith("FIRST_LOGIN_RESET:") && !authError.startsWith("SECURITY_LOCK:") ? authError : '');
 
   useEffect(() => {
     const checkWidth = () => {
@@ -62,6 +67,7 @@ const Landing = () => {
   const resetMessages = () => {
     setLocalError('');
     setSuccessMessage('');
+    setSecurityLockMessage('');
   };
 
   const handleResetPassword = async (e) => {
@@ -102,13 +108,13 @@ const Landing = () => {
         routeUser(userData.role);
       }
     } catch (err) {
-      // ✨ NEW: Catch the forced reset flag and show it as a success/info box instead of an error!
+      // ✨ CATCH THE SECURITY LOCK OR FIRST_LOGIN
       if (err.message.startsWith("FIRST_LOGIN_RESET:")) {
         setSuccessMessage(err.message.replace("FIRST_LOGIN_RESET:", "").trim());
-        setLocalError('');
+      } else if (err.message.startsWith("SECURITY_LOCK:")) {
+        setSecurityLockMessage(err.message.replace("SECURITY_LOCK:", "").trim());
       } else {
         setLocalError(err.message || 'An unexpected error occurred.');
-        setSuccessMessage('');
       }
       setLoading(false);
     }
@@ -283,29 +289,37 @@ const Landing = () => {
           </div>
         </div>
 
-        <div className="w-2/5 flex items-center justify-center p-8 relative bg-white">
-          <div className="w-full max-w-sm flex flex-col">
+        <div className="w-2/5 flex items-center justify-center p-8 relative bg-white overflow-y-auto">
+          <div className="w-full max-w-sm flex flex-col my-auto py-8">
             <div className="mb-8">
               <h2 className="text-3xl font-black text-slate-800 tracking-tight">Sign In</h2>
               <p className="text-sm text-slate-500 mt-2 font-medium">Please enter your institutional credentials to access your laboratory modules.</p>
             </div>
 
-            {(localError || authError) && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start text-red-700 animate-shake shadow-sm">
+            {displayError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start text-red-700 animate-shake shadow-sm shrink-0">
                 <AlertCircle size={18} className="mr-2 flex-shrink-0 mt-0.5 text-red-500" />
-                <span className="text-sm font-medium">{localError || authError}</span>
+                <span className="text-sm font-medium leading-tight">{displayError}</span>
               </div>
             )}
 
             {successMessage && (
-              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start text-emerald-800 animate-fade-in-up shadow-sm">
+              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start text-emerald-800 animate-fade-in-up shadow-sm shrink-0">
                 <CheckCircle size={18} className="mr-2 flex-shrink-0 mt-0.5 text-emerald-600" />
-                <span className="text-sm font-medium">{successMessage}</span>
+                <span className="text-sm font-medium leading-tight">{successMessage}</span>
+              </div>
+            )}
+
+            {/* SECURITY LOCK BANNER */}
+            {securityLockMessage && (
+              <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl flex items-start text-orange-800 animate-shake shadow-sm shrink-0">
+                <ShieldAlert size={18} className="mr-2 flex-shrink-0 mt-0.5 text-orange-600" />
+                <span className="text-sm font-medium leading-tight">{securityLockMessage}</span>
               </div>
             )}
 
             {isForgotPassword ? (
-              <div className="animate-fade-in flex flex-col">
+              <div className="animate-fade-in flex flex-col shrink-0">
                 <button onClick={() => { setIsForgotPassword(false); resetMessages(); }} className="flex items-center text-sm font-bold text-slate-400 hover:text-blue-600 transition-colors mb-6 w-fit">
                   <ArrowLeft size={16} className="mr-1" /> Back to Login
                 </button>
@@ -322,7 +336,7 @@ const Landing = () => {
                 </form>
               </div>
             ) : (
-              <div className="animate-fade-in">
+              <div className="animate-fade-in shrink-0">
                 <form onSubmit={handleSubmit}>
                   <div className="mb-5">
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
@@ -337,7 +351,7 @@ const Landing = () => {
                       </button>
                     </div>
                   </div>
-                  <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none">
+                  <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none mt-4">
                     {loading ? 'Authenticating...' : 'Secure Login'}
                   </button>
                 </form>

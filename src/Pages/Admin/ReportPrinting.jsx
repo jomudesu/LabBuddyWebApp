@@ -22,8 +22,10 @@ const ReportsPrinting = () => {
   // User Filters
   const [userRole, setUserRole] = useState('All');
   const [userStatus, setUserStatus] = useState('All');
+  const [userSection, setUserSection] = useState('All'); // ✨ NEW
   
   // Experiment Filters
+  const [expCategory, setExpCategory] = useState('All'); // ✨ NEW
   const [expDifficulty, setExpDifficulty] = useState('All');
   const [expStatus, setExpStatus] = useState('All');
   
@@ -34,8 +36,8 @@ const ReportsPrinting = () => {
   // Reset filters when switching tabs
   useEffect(() => {
     setSearchQuery('');
-    setUserRole('All'); setUserStatus('All');
-    setExpDifficulty('All'); setExpStatus('All');
+    setUserRole('All'); setUserStatus('All'); setUserSection('All');
+    setExpDifficulty('All'); setExpStatus('All'); setExpCategory('All');
     setInvCategory('All'); setInvHazard('All');
   }, [activeReport]);
 
@@ -80,6 +82,12 @@ const ReportsPrinting = () => {
     window.print();
   };
 
+  // ✨ NEW: Dynamically generate class sections for the filter
+  const sections = useMemo(() => {
+    if (activeReport !== 'users') return ['All'];
+    return ['All', ...new Set(reportData.filter(u => u.role === 'student' && u.section && u.section !== '-').map(u => u.section))];
+  }, [reportData, activeReport]);
+
   // ─── FILTER LOGIC ───
   const processedData = useMemo(() => {
     return reportData.filter(item => {
@@ -87,13 +95,15 @@ const ReportsPrinting = () => {
         const matchesSearch = (item.displayName || '').toLowerCase().includes(searchQuery.toLowerCase()) || (item.email || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesRole = userRole === 'All' || (item.role || 'student').toLowerCase() === userRole.toLowerCase();
         const matchesStatus = userStatus === 'All' || (item.status || 'active').toLowerCase() === userStatus.toLowerCase();
-        return matchesSearch && matchesRole && matchesStatus;
+        const matchesSection = userSection === 'All' || item.section === userSection; // ✨ NEW
+        return matchesSearch && matchesRole && matchesStatus && matchesSection;
       }
       if (activeReport === 'experiments') {
         const matchesSearch = (item.title || '').toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCategory = expCategory === 'All' || (item.category || '') === expCategory; // ✨ NEW
         const matchesDifficulty = expDifficulty === 'All' || (item.difficulty || 'Beginner') === expDifficulty;
         const matchesStatus = expStatus === 'All' || (item.status || 'published').toLowerCase() === expStatus.toLowerCase();
-        return matchesSearch && matchesDifficulty && matchesStatus;
+        return matchesSearch && matchesCategory && matchesDifficulty && matchesStatus;
       }
       if (activeReport === 'inventory') {
         const matchesSearch = (item.name || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -103,7 +113,7 @@ const ReportsPrinting = () => {
       }
       return true;
     });
-  }, [reportData, activeReport, searchQuery, userRole, userStatus, expDifficulty, expStatus, invCategory, invHazard]);
+  }, [reportData, activeReport, searchQuery, userRole, userStatus, userSection, expCategory, expDifficulty, expStatus, invCategory, invHazard]);
 
   const reportTypes = [
     { id: 'users', title: 'User Directory', icon: Users, color: 'blue' },
@@ -210,11 +220,27 @@ const ReportsPrinting = () => {
                   <option value="pending">Pending</option>
                   <option value="disabled">Disabled</option>
                 </select>
+                {/* ✨ NEW: Section Filter with proper disable logic */}
+                <select 
+                  value={userSection} 
+                  onChange={(e) => setUserSection(e.target.value)} 
+                  disabled={userRole === 'admin' || userRole === 'instructor'}
+                  className={`px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 outline-none focus:border-blue-500 transition-all ${userRole === 'admin' || userRole === 'instructor' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {sections.map(sec => <option key={sec} value={sec}>{sec === 'All' ? 'All Sections' : sec}</option>)}
+                </select>
               </>
             )}
 
             {activeReport === 'experiments' && (
               <>
+                {/* ✨ NEW: Category Filter */}
+                <select value={expCategory} onChange={(e) => setExpCategory(e.target.value)} className="px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 outline-none focus:border-blue-500">
+                  <option value="All">All Categories</option>
+                  <option value="Chemistry">Chemistry</option>
+                  <option value="Physics">Physics</option>
+                  <option value="Biology">Biology</option>
+                </select>
                 <select value={expDifficulty} onChange={(e) => setExpDifficulty(e.target.value)} className="px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-300 outline-none focus:border-blue-500">
                   <option value="All">All Levels</option>
                   <option value="Beginner">Beginner</option>
