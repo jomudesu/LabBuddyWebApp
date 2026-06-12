@@ -1,23 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  Search, 
-  Filter, 
-  X, 
-  LayoutGrid, 
-  Beaker, 
-  FlaskConical, 
-  Activity, 
-  Box,
-  Cpu,
-  AlertCircle,
-  CheckCircle2,
-  AlertTriangle,
-  Flame,
-  ShieldAlert,
-  Skull
+  Search, Filter, X, LayoutGrid, Beaker, FlaskConical, 
+  Activity, Box, Cpu, AlertCircle, CheckCircle2,
+  AlertTriangle, Flame, ShieldAlert, Skull
 } from 'lucide-react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../backend/Firebase/firebase';
+import { supabase } from '../backend/Firebase/firebase';
 
 const Inventory = () => {
   // ─── STATE MANAGEMENT ───
@@ -31,25 +18,37 @@ const Inventory = () => {
     hazard: 'All'
   });
 
-  // ─── REAL-TIME FIREBASE CONNECTION ───
+  // ─── FETCH FROM SUPABASE SQL ───
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'inventory'), (snapshot) => {
-      const fetchedItems = [];
-      snapshot.forEach((doc) => {
-        fetchedItems.push({ id: doc.id, ...doc.data() });
-      });
-      
-      // Sort alphabetically by name
-      fetchedItems.sort((a, b) => a.name.localeCompare(b.name));
-      
-      setInventory(fetchedItems);
-      setLoading(false);
-    });
+    const fetchInventory = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('inventory')
+          .select('*')
+          .order('name', { ascending: true }); // Alphabetical sort built into SQL!
 
-    return () => unsubscribe();
+        if (error) throw error;
+        
+        setInventory(data);
+      } catch (error) {
+        console.error("Error fetching inventory:", error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInventory();
+
+    // Set up Realtime Sync just like Firebase onSnapshot
+    const channel = supabase.channel('inventory_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
+        fetchInventory();
+      }).subscribe();
+
+    return () => supabase.removeChannel(channel);
   }, []);
 
-  // Update categories to match the Admin CMS options
+  // Categories & Hazards
   const categories = ['All', 'Chemical', 'Glassware', 'Equipment', 'Safety'];
   const hazards = ['All', 'None', 'Flammable', 'Toxic', 'Corrosive'];
 
@@ -63,7 +62,6 @@ const Inventory = () => {
       const matchesSearch = safeName.includes(query) || safeDetails.includes(query);
       const matchesCategory = filters.category === 'All' || item.category === filters.category;
       
-      // Handle the "None" / "Safe" overlap gracefully
       const itemHazard = item.hazard === 'None' ? 'Safe' : item.hazard;
       const filterHazardMapped = filters.hazard === 'None' ? 'Safe' : filters.hazard;
       const matchesHazard = filters.hazard === 'All' || itemHazard === filterHazardMapped;
@@ -78,8 +76,6 @@ const Inventory = () => {
   };
 
   // ─── DYNAMIC BADGE & STYLING HELPERS ───
-  
-  // Assigns colors and icons dynamically based on the database category
   const getCategoryTheme = (category) => {
     switch (category) {
       case 'Chemical': return { icon: FlaskConical, color: 'blue' };
@@ -241,7 +237,6 @@ const Inventory = () => {
                     <IconComponent className={`text-${color}-600`} size={24} />
                   </div>
                   
-                  {/* Dynamically colored hazard badge */}
                   <span className={`flex items-center text-[11px] font-bold px-2.5 py-1.5 rounded-md border shadow-sm ${getHazardBadge(item.hazard)}`}>
                     {getHazardIcon(item.hazard)}
                     {item.hazard === 'None' ? 'SAFE' : item.hazard.toUpperCase()}
@@ -265,7 +260,6 @@ const Inventory = () => {
             );
           })}
         </div>
-
       </div>
     </div>
   );

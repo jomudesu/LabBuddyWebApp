@@ -30,6 +30,12 @@ const InstructorLayout = ({ children }) => {
     }
   };
 
+  const safeDisplayName = currentUser?.displayName || '';
+  const safeEmail = currentUser?.email || '';
+  
+  const avatarLetter = (safeDisplayName || safeEmail || 'I').charAt(0).toUpperCase();
+  const displayLabel = safeDisplayName || (safeEmail ? safeEmail.split('@')[0] : 'Instructor');
+
   return (
     <div className="flex h-screen bg-slate-50">
       
@@ -85,11 +91,11 @@ const InstructorLayout = ({ children }) => {
           {/* Profile Card */}
           <div className="flex items-center mb-4 group cursor-default">
             <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-0.5 group-hover:scale-105 shrink-0">
-              {(currentUser?.displayName || currentUser?.email || 'I').charAt(0).toUpperCase()}
+              {avatarLetter}
             </div>
             <div className="ml-3 overflow-hidden">
               <p className="text-sm font-bold text-slate-800 truncate transition-colors duration-300 group-hover:text-purple-700">
-                {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Instructor'}
+                {displayLabel}
               </p>
               <p className="text-xs text-slate-500 font-medium mt-0.5 capitalize">
                 {currentUser?.role || 'Instructor'}

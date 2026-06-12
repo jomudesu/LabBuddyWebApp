@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './firebase'; 
 
 export const useExperiments = () => {
   const [experiments, setExperiments] = useState([]);
@@ -10,15 +9,28 @@ export const useExperiments = () => {
   useEffect(() => {
     const fetchExperiments = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'experiment'));
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setExperiments(list);
+        // Fetch all experiments from Supabase Postgres
+        const { data, error: fetchError } = await supabase
+          .from('experiments')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (fetchError) throw fetchError;
+
+        // Map data to ensure compatibility with your legacy React components
+        const formattedData = data.map(exp => ({
+          ...exp,
+          createdAt: exp.created_at
+        }));
+
+        setExperiments(formattedData);
       } catch (err) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchExperiments();
   }, []);
 

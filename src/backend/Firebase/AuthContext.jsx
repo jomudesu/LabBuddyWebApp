@@ -1,14 +1,12 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { 
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  updatePassword // ✨ NEW: Needed to scramble the temporary password
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import { auth, db } from './firebase';
+import { auth, supabase } from './firebase';
 
 const AuthContext = createContext();
 
@@ -22,18 +20,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✨ Ref to securely suspend the auth listener during registration
-  const isRegisteringRef = useRef(false);
-
+  // ─── LISTEN TO SUPABASE SYSTEM PREFERENCES ───
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'system', 'preferences'), (docSnap) => {
-      if (docSnap.exists()) {
-        setPlatformSettings(docSnap.data());
-      } else {
-        setPlatformSettings({ maintenanceMode: false, allowRegistrations: true, announcementBanner: '' });
+    const fetchPrefs = async () => {
+      const { data } = await supabase.from('system_preferences').select('*').eq('id', 'default').single();
+      if (data) {
+        setPlatformSettings({ 
+          maintenanceMode: data.maintenance_mode, 
+          allowRegistrations: data.allow_registrations,
+          announcementBanner: data.announcement_banner 
+        });
       }
-    });
-    return unsub;
+    };
+    fetchPrefs();
+
+    const channel = supabase.channel('system_prefs_changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_preferences' }, (payload) => {
+        setPlatformSettings({ 
+          maintenanceMode: payload.new.maintenance_mode, 
+          allowRegistrations: payload.new.allow_registrations,
+          announcementBanner: payload.new.announcement_banner 
+        });
+      }).subscribe();
+
+    return () => supabase.removeChannel(channel);
   }, []);
 
   useEffect(() => {
@@ -44,53 +54,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [platformSettings?.maintenanceMode, currentUser]);
 
-
-  const register = async (email, password, displayName, role, section) => {
-    // Suspend the listener immediately to block ghost-routing
-    isRegisteringRef.current = true; 
-    
-    try {
-      setError(null);
-      if (platformSettings && !platformSettings.allowRegistrations) {
-        throw new Error("Registrations are currently closed by the administrator.");
-      }
-
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      await updateProfile(user, { displayName: displayName });
-      
-      const userData = {
-        uid: user.uid,
-        email: user.email,
-        displayName: displayName,
-        role: role || 'student',
-        section: section || '-',
-        status: 'pending', 
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp(),
-      };
-
-      await setDoc(doc(db, 'users', user.uid), userData);
-      
-      // Force sign-out before the listener is allowed to wake up
-      await signOut(auth);
-      setCurrentUser(null);
-
-      // ✨ FIX: Delay lifting the shield for 2 seconds to absorb ALL delayed Firebase microtasks!
-      setTimeout(() => {
-        isRegisteringRef.current = false;
-      }, 2000);
-
-      return { status: 'pending' };
-
-    } catch (err) {
-      isRegisteringRef.current = false;
-      setError(err.message);
-      throw err;
-    } 
-  };
-
+  // ─── LOGIN (SUPABASE SQL HYBRID) ───
   const login = async (email, password) => {
     try {
       setError(null);
@@ -98,38 +62,63 @@ export const AuthProvider = ({ children }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
+      const [userRes, prefsRes] = await Promise.all([
+        supabase.from('users').select('*').eq('id', user.uid).single(),
+        supabase.from('system_preferences').select('*').eq('id', 'default').single()
+      ]);
       
-      if (!userDocSnap.exists()) {
+      const userData = userRes.data;
+      const freshPrefs = prefsRes.data;
+
+      if (userRes.error || !userData) {
         await signOut(auth);
         throw new Error("This account has been removed by an administrator.");
       }
 
-      const userData = userDocSnap.data();
-      const userRole = userData.role || 'student';
+      // ✨ NEW: FIRST-LOGIN FORCED PASSWORD CHANGE LOGIC
+      if (userData.requires_password_change) {
+        try {
+          // 1. Scramble the password so the admin's temporary one is destroyed forever
+          const scrambledPassword = Math.random().toString(36).slice(-10) + "aA1!@"; 
+          await updatePassword(user, scrambledPassword);
+
+          // 2. Update Supabase so they don't get blocked next time
+          await supabase.from('users').update({ requires_password_change: false }).eq('id', user.uid);
+
+          // 3. Send the reset email
+          await sendPasswordResetEmail(auth, email);
+          
+          // 4. Kick them out and throw a special flag to the Landing page
+          await signOut(auth);
+          throw new Error(`FIRST_LOGIN_RESET: Account verified! For your security, you must set a permanent password. A secure reset link has been sent to ${email}.`);
+        } catch (resetErr) {
+          if (resetErr.message.startsWith("FIRST_LOGIN_RESET:")) throw resetErr;
+          await signOut(auth);
+          throw new Error("Action required: Please use the 'Forgot Password' feature to set a secure password for your new account.");
+        }
+      }
+
+      if (freshPrefs?.maintenance_mode && userData.role !== 'admin') {
+        await signOut(auth); 
+        throw new Error("System is currently undergoing maintenance. Please try again later.");
+      }
 
       if (userData.status === 'disabled') {
         await signOut(auth);
         throw new Error("Your account has been disabled. Please contact the administrator.");
       }
 
-      if (platformSettings?.maintenanceMode && userRole !== 'admin') {
-        await signOut(auth); 
-        throw new Error("System is currently undergoing maintenance. Please try again later.");
-      }
-
-      // Check pending status securely on login
       if (userData.status === 'pending') {
         await signOut(auth); 
-        const errorMsg = userRole === 'instructor' 
-          ? "Your Instructor account is pending admin approval." 
+        const errorMsg = userData.role === 'instructor' 
+          ? "Your instructor account is pending admin approval." 
           : `Your student account is pending Admin verification for Section: ${userData.section || '-'}`;
         throw new Error(errorMsg);
       }
 
-      await setDoc(userDocRef, { lastLogin: serverTimestamp() }, { merge: true });
-      return { userCredential, role: userRole }; 
+      await supabase.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.uid);
+      
+      return { userCredential, userData }; 
     } catch (err) {
       setError(err.message);
       throw err;
@@ -157,30 +146,40 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      // If the shield is up, ignore everything Firebase Auth says!
-      if (isRegisteringRef.current) return;
-
       if (firebaseUser) {
         try {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const [userRes, prefsRes] = await Promise.all([
+            supabase.from('users').select('*').eq('id', firebaseUser.uid).single(),
+            supabase.from('system_preferences').select('*').eq('id', 'default').single()
+          ]);
           
-          if (userDocSnap.exists()) {
-            const customUserData = userDocSnap.data();
-            if (customUserData.status === 'pending' || customUserData.status === 'disabled') {
+          const customUserData = userRes.data;
+          const freshPrefs = prefsRes.data;
+          
+          if (customUserData) {
+            // Prevent auto-login if they still require a password change somehow
+            if (customUserData.requires_password_change) {
+              await signOut(auth);
+              setCurrentUser(null);
+            } else if (freshPrefs?.maintenance_mode && customUserData.role !== 'admin') {
+              await signOut(auth);
+              setCurrentUser(null);
+            } else if (customUserData.status === 'pending' || customUserData.status === 'disabled') {
               await signOut(auth);
               setCurrentUser(null);
             } else {
-              setCurrentUser({ ...firebaseUser, ...customUserData });
+              setCurrentUser({ 
+                ...firebaseUser, 
+                ...customUserData,
+                displayName: customUserData.display_name, 
+                hasAcceptedDPA: customUserData.has_accepted_dpa
+              });
             }
           } else {
             await signOut(auth);
             setCurrentUser(null);
           }
         } catch (err) {
-          if (err.code !== 'permission-denied') {
-            console.error("Error fetching user data/role:", err);
-          }
           setCurrentUser(null);
         }
       } else {
@@ -197,7 +196,6 @@ export const AuthProvider = ({ children }) => {
     platformSettings,
     loading,
     error,
-    register,
     login,
     resetPassword, 
     logout

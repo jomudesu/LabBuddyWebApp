@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './firebase';
 import { useAuth } from './AuthContext';
 
 // 1. Create the Context
@@ -12,6 +11,34 @@ export const ProgressProvider = ({ children }) => {
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // Helper to fetch progress from Supabase
+  const fetchProgress = async () => {
+    if (!currentUser) return;
+    
+    const { data, error } = await supabase
+      .from('user_progress')
+      .select('*')
+      .eq('user_id', currentUser.uid); // Fetch ONLY the current student's progress
+
+    if (!error && data) {
+      const progressMap = {};
+      data.forEach(row => {
+        // Format it exactly how the old Firestore context did so the UI doesn't break
+        progressMap[row.experiment_id] = {
+          id: row.id,
+          userId: row.user_id,
+          experimentId: row.experiment_id,
+          status: row.status,
+          grade: row.grade,
+          errors: row.errors,
+          completedAt: row.completed_at
+        };
+      });
+      setProgress(progressMap);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!currentUser) {
       setProgress({});
@@ -19,53 +46,58 @@ export const ProgressProvider = ({ children }) => {
       return;
     }
 
-    const q = query(collection(db, 'userProgress'), where('userId', '==', currentUser.uid));
-    
-    // onSnapshot automatically listens for real-time updates from Firebase
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const progressMap = {};
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        progressMap[data.experimentId] = data;
-      });
-      setProgress(progressMap);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching progress:', error);
-      setLoading(false);
-    });
+    // Initial Fetch
+    fetchProgress();
 
-    // Cleanup the listener when the user logs out or leaves
-    return () => unsubscribe();
+    // Supabase Real-time Listener (Replaces Firestore onSnapshot)
+    const channel = supabase.channel('user_progress_changes')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'user_progress', filter: `user_id=eq.${currentUser.uid}` }, 
+        () => {
+          fetchProgress(); // Re-fetch immediately if data changes
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
   }, [currentUser]);
 
   const updateExperimentStatus = async (experimentId, status) => {
     if (!currentUser) return;
-    const docId = `${currentUser.uid}_${experimentId}`;
-    const docRef = doc(db, 'userProgress', docId);
-    const now = new Date();
-
-    const data = {
-      userId: currentUser.uid,
-      experimentId,
-      status,
-      lastAccessed: now,
-    };
-    
-    if (status === 'in_progress') data.startedAt = now;
-    if (status === 'completed') data.completedAt = now;
+    const now = new Date().toISOString();
 
     try {
-      const existing = await getDoc(docRef);
-      if (existing.exists()) {
-        await updateDoc(docRef, data);
+      // 1. Check if a record already exists for this specific experiment
+      const { data: existing } = await supabase
+        .from('user_progress')
+        .select('id')
+        .eq('user_id', currentUser.uid)
+        .eq('experiment_id', experimentId)
+        .single();
+
+      const updateData = { status };
+      if (status === 'completed') updateData.completed_at = now;
+
+      if (existing) {
+        // 2. UPDATE existing record
+        await supabase
+          .from('user_progress')
+          .update(updateData)
+          .eq('id', existing.id);
       } else {
-        await setDoc(docRef, data);
+        // 3. INSERT brand new record
+        await supabase
+          .from('user_progress')
+          .insert([{
+            user_id: currentUser.uid,
+            experiment_id: experimentId,
+            status: status,
+            ...(status === 'completed' ? { completed_at: now } : {})
+          }]);
       }
-      // Notice we no longer manually call setProgress() here!
-      // onSnapshot detects the change and updates the whole app instantly.
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.error('Error updating progress in Supabase:', error);
     }
   };
 
@@ -78,6 +110,5 @@ export const ProgressProvider = ({ children }) => {
   );
 };
 
-// 3. Export the hook so your other components don't need to change their imports
-// eslint-disable-next-line react-refresh/only-export-components
+// 3. Export the hook
 export const useProgress = () => useContext(ProgressContext);
