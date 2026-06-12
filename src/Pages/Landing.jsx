@@ -11,7 +11,7 @@ import { supabase } from '../backend/Firebase/firebase';
 import emailjs from '@emailjs/browser';
 
 const Landing = () => {
-  const { login, resetPassword, error: authError, platformSettings, logout } = useAuth(); // Added logout
+  const { login, resetPassword, error: authError, platformSettings, logout } = useAuth(); 
   
   const [isForgotPassword, setIsForgotPassword] = useState(false); 
   const [email, setEmail] = useState('');
@@ -42,16 +42,14 @@ const Landing = () => {
   const navigate = useNavigate();
 
   const isMaintenanceMode = platformSettings?.maintenanceMode === true && platformSettings?.announcementBanner?.length > 0;
-  const displayError = localError || (authError && !authError.startsWith("FIRST_LOGIN_RESET:") && !authError.startsWith("SECURITY_LOCK:") ? authError : '');
+  const displayError = localError || (authError && !authError.includes("FIRST_LOGIN_RESET:") && !authError.includes("SECURITY_LOCK:") ? authError : '');
 
-  // Cooldown Timer
   useEffect(() => {
     let timer;
     if (resetCooldown > 0) timer = setInterval(() => setResetCooldown((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [resetCooldown]);
 
-  // Marquee Check
   useEffect(() => {
     const checkWidth = () => {
       if (isMaintenanceMode && bannerContainerRef.current && bannerTextRef.current) {
@@ -65,7 +63,6 @@ const Landing = () => {
     return () => window.removeEventListener('resize', checkWidth);
   }, [isMaintenanceMode, platformSettings?.announcementBanner]);
 
-  // Scrolling logic
   useEffect(() => {
     const handleScroll = () => {
       if (scrollContainerRef.current) {
@@ -97,7 +94,8 @@ const Landing = () => {
       setResetCooldown(60); 
       setResetEmail('');
     } catch (err) {
-      setLocalError(err.message);
+      const errorMsg = err?.message || err?.text || String(err);
+      setLocalError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -116,59 +114,77 @@ const Landing = () => {
     setLoading(true);
 
     try {
-      // 1. Authenticate Password & Credentials first
-      const response = await login(email, password);
-      const { userData } = response;
+      const response = await login(email, password, { trustDevice: false });
+      const { userData, isNewDevice } = response; 
       
-      // 2. Generate a random 6-digit OTP
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOTP(code);
-      setPendingRoutingRole(userData.role);
+      if (isNewDevice) {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        setGeneratedOTP(code);
+        setPendingRoutingRole(userData.role);
 
-      // 3. Send OTP via EmailJS
-      // ⚠️ IMPORTANT: Replace these 3 strings with your actual EmailJS IDs!
-      const EMAILJS_SERVICE_ID = 'service_klx965k'; 
-      const EMAILJS_TEMPLATE_ID = 'template_lfl0gw7'; 
-      const EMAILJS_PUBLIC_KEY = 'E8urjnzgRBoIBC6Og'; 
+        // Using Environment Variables safely!
+        const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID; 
+        const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID; 
+        const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY; 
 
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        to_email: email,
-        to_name: userData.displayName,
-        otp_code: code
-      }, EMAILJS_PUBLIC_KEY);
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email: email,
+          to_name: userData.displayName,
+          otp_code: code
+        }, EMAILJS_PUBLIC_KEY);
 
-      // 4. Switch UI to OTP mode (Hold them back from dashboard)
-      if (!userData.has_accepted_dpa && userData.role !== 'admin') {
-        setPendingUser(userData);
+        if (!userData.has_accepted_dpa && userData.role !== 'admin') {
+          setPendingUser(userData);
+        }
+        
+        setShowOTP(true);
+        setSuccessMessage(`Unrecognized device detected. A security code has been sent to ${email}.`);
+      } else {
+        if (!userData.has_accepted_dpa && userData.role !== 'admin') {
+          setPendingUser(userData);
+          setShowDPAModal(true);
+        } else {
+          routeUser(userData.role);
+        }
       }
-      setShowOTP(true);
-      setSuccessMessage(`A 6-digit security code has been sent to ${email}.`);
 
     } catch (err) {
-      if (err.message.startsWith("FIRST_LOGIN_RESET:")) {
-        setSuccessMessage(err.message.replace("FIRST_LOGIN_RESET:", "").trim());
-      } else if (err.message.startsWith("SECURITY_LOCK:")) {
-        setSecurityLockMessage(err.message.replace("SECURITY_LOCK:", "").trim());
+      const errorMsg = err?.message || err?.text || String(err);
+      
+      if (typeof errorMsg === 'string' && errorMsg.includes("FIRST_LOGIN_RESET:")) {
+        setSuccessMessage(errorMsg.replace("FIRST_LOGIN_RESET:", "").trim());
+      } else if (typeof errorMsg === 'string' && errorMsg.includes("SECURITY_LOCK:")) {
+        setSecurityLockMessage(errorMsg.replace("SECURITY_LOCK:", "").trim());
       } else {
-        setLocalError(err.message || 'An unexpected error occurred.');
+        setLocalError(errorMsg || 'An unexpected error occurred. Please try again.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // ✨ Verify the OTP input
+  // Verify the OTP input
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setLocalError('');
     
     if (otpInput === generatedOTP) {
-      // Success! Route them or show DPA
-      if (pendingUser) {
-        setShowOTP(false);
-        setShowDPAModal(true);
-      } else {
-        routeUser(pendingRoutingRole);
+      setLoading(true);
+      try {
+        const response = await login(email, password, { trustDevice: true });
+        const { userData } = response;
+
+        if (pendingUser) {
+          setShowOTP(false);
+          setShowDPAModal(true);
+        } else {
+          routeUser(pendingRoutingRole);
+        }
+      } catch (err) {
+        const errorMsg = err?.message || err?.text || String(err);
+        setLocalError(errorMsg || 'Verification failed.');
+      } finally {
+        setLoading(false);
       }
     } else {
       setLocalError("Invalid verification code. Please try again.");
@@ -176,9 +192,8 @@ const Landing = () => {
     }
   };
 
-  // ✨ Cancel OTP (Abort Login)
   const cancelOTP = async () => {
-    await logout(); // Kick them out of Firebase Auth since they aborted
+    await logout(); 
     setShowOTP(false);
     setOtpInput('');
     setGeneratedOTP('');
@@ -314,7 +329,6 @@ const Landing = () => {
         <div className="w-full lg:w-2/5 flex items-center justify-center p-8 relative bg-white overflow-y-auto">
           <div className="w-full max-w-sm flex flex-col my-auto py-8">
             
-            {/* ─── NOTIFICATIONS (Shared across all views) ─── */}
             {displayError && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start text-red-700 animate-shake shadow-sm shrink-0">
                 <AlertCircle size={18} className="mr-2 flex-shrink-0 mt-0.5 text-red-500" />
@@ -361,8 +375,8 @@ const Landing = () => {
                       placeholder="••••••" 
                     />
                   </div>
-                  <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
-                    Verify & Authenticate
+                  <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] disabled:opacity-50">
+                    {loading ? 'Verifying...' : 'Verify & Authenticate'}
                   </button>
                   <button type="button" onClick={cancelOTP} className="w-full mt-4 bg-transparent text-slate-500 py-3 rounded-xl font-bold hover:text-slate-700 hover:bg-slate-100 transition-all">
                     Cancel Login

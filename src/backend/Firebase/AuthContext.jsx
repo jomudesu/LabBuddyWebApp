@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }) => {
   }, [platformSettings?.maintenanceMode, currentUser]);
 
   // ─── LOGIN (SUPABASE SQL HYBRID) ───
-  const login = async (email, password) => {
+  const login = async (email, password, options = { trustDevice: false }) => {
     try {
       setError(null);
       
@@ -90,26 +90,31 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // 2. ZERO-TRUST DEVICE FINGERPRINTING (STOLEN ACCOUNT PROTECTION)
-      // Admins are excluded so you don't lock yourself out of the dashboard while testing!
+      // 2. ZERO-TRUST DEVICE FINGERPRINTING
       let currentKnownDevices = userData.known_devices || [];
       let localDeviceId = localStorage.getItem('lab_buddy_device_id');
+      let isNewDevice = false;
 
-      // Generate a unique device ID if this browser doesn't have one
       if (!localDeviceId) {
         localDeviceId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
         localStorage.setItem('lab_buddy_device_id', localDeviceId);
       }
 
-      // Check if this is an unrecognized device
       if (userData.role !== 'admin' && !currentKnownDevices.includes(localDeviceId)) {
-        // If they already have 2 devices registered, BLOCK THE LOGIN.
         if (currentKnownDevices.length >= 2) {
           await signOut(auth);
           throw new Error("SECURITY_LOCK: Unrecognized device detected. To prevent account theft and unauthorized sharing, Lab Buddy limits access to 2 authorized devices. Please contact an Administrator to reset your device authorizations.");
         } else {
-          // If under the limit, authorize this new device automatically
-          currentKnownDevices.push(localDeviceId);
+          // Check if we are doing a dry-run or a real login
+          if (options.trustDevice) {
+            // User entered the OTP! Trust the device.
+            currentKnownDevices.push(localDeviceId);
+          } else {
+            // DRY RUN: Password is correct, but we need OTP. 
+            // Sign out immediately so the App Router doesn't pull them to the dashboard!
+            await signOut(auth);
+            return { userCredential: null, userData, isNewDevice: true };
+          }
         }
       }
 
@@ -139,7 +144,7 @@ export const AuthProvider = ({ children }) => {
         known_devices: currentKnownDevices
       }).eq('id', user.uid);
       
-      return { userCredential, userData }; 
+      return { userCredential, userData, isNewDevice: false }; 
     } catch (err) {
       setError(err.message);
       throw err;
@@ -178,6 +183,9 @@ export const AuthProvider = ({ children }) => {
           const freshPrefs = prefsRes.data;
           
           if (customUserData) {
+            // If the user was signed out during an OTP Dry-Run, abort the listener to stop the Router!
+            if (!auth.currentUser) return;
+
             if (customUserData.requires_password_change) {
               await signOut(auth);
               setCurrentUser(null);
