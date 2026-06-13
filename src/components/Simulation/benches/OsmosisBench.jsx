@@ -33,26 +33,18 @@ const OsmosisBench = ({
   
   const target = currentStep?.targetElement;
 
-  // Ensures clickables disable themselves the moment the experiment finishes
-  const isTarget = (id) => target === id && !isComplete;
-
-  // NEW: Local state to handle the longer fluid wash independently of the engine's 700ms tick
+  // Local state to handle the longer fluid wash independently of the engine's 700ms tick
   const [wash, setWash] = useState({ active: false, type: null });
 
   useEffect(() => {
-    // Trigger our custom wash state when the global animation starts
     if (animating && (target === 'iso_drop' || target === 'hypo_drop' || target === 'hyper_drop')) {
       setWash({ active: true, type: target });
-      
-      // Let the wash run for a full 1.5 seconds, even after the global engine advances the step!
       const timer = setTimeout(() => setWash({ active: false, type: null }), 1500); 
       return () => clearTimeout(timer);
     }
   }, [animating, target]);
 
-  // Dynamically colors the capillary wash wave based on the selected solution
   const getWashColor = () => {
-    // FIXED: Colors bumped to /90 opacity and darkened to fix the "pale" look
     if (wash.type === 'iso_drop') return 'via-gray-400/90';
     if (wash.type === 'hypo_drop') return 'via-cyan-400/90';
     if (wash.type === 'hyper_drop') return 'via-blue-600/90';
@@ -63,7 +55,6 @@ const OsmosisBench = ({
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 flex flex-col justify-center relative overflow-hidden h-full min-h-[500px]">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
-      {/* Embedded CSS for the realistic fluid capillary wash */}
       <style>{`
         @keyframes capillary-wash {
           0% { transform: translateX(-150%) skewX(-15deg); }
@@ -83,43 +74,58 @@ const OsmosisBench = ({
             {/* Isotonic */}
             <div className="flex flex-col items-center relative z-10">
               <div 
-                className={`flex flex-col items-center transition-all duration-300 group ${isTarget('iso_drop') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''}`}
-                onClick={() => isTarget('iso_drop') && handleElementClick('iso_drop')}
+                className="flex flex-col items-center transition-all duration-300 group cursor-pointer"
+                onClick={() => handleElementClick('iso_drop')}
               >
-                <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-transform duration-700 ${target === 'iso_drop' && animating ? 'translate-x-[250px] -translate-y-[150px] rotate-[60deg]' : ''}`}>
+                <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-all duration-700 ease-in-out ${
+                    target === 'iso_drop' && animating 
+                      ? 'translate-x-[250px] -translate-y-[150px] rotate-[60deg] scale-110 z-30' 
+                      : 'group-hover:-translate-y-2 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] group-hover:border-white/80 z-10'
+                  }`}
+                >
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-gray-200 rounded-t border border-gray-400" />
                   <div className="w-full h-[60%] bg-gray-300/40 border-t border-white/40"></div>
                 </div>
               </div>
-              <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">0.9% NaCl</span>
+              <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-colors duration-300 group-hover:bg-white/20">0.9% NaCl</span>
             </div>
 
             {/* Hypotonic */}
             <div className="flex flex-col items-center relative z-10">
               <div 
-                className={`flex flex-col items-center transition-all duration-300 group ${isTarget('hypo_drop') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''}`}
-                onClick={() => isTarget('hypo_drop') && handleElementClick('hypo_drop')}
+                className="flex flex-col items-center transition-all duration-300 group cursor-pointer"
+                onClick={() => handleElementClick('hypo_drop')}
               >
-                <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-transform duration-700 ${target === 'hypo_drop' && animating ? 'translate-x-[150px] -translate-y-[150px] rotate-[60deg]' : ''}`}>
+                <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-all duration-700 ease-in-out ${
+                    target === 'hypo_drop' && animating 
+                      ? 'translate-x-[150px] -translate-y-[150px] rotate-[60deg] scale-110 z-30' 
+                      : 'group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-cyan-300 group-hover:shadow-[0_0_20px_rgba(34,212,238,0.4)] z-10'
+                  }`}
+                >
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-gray-200 rounded-t border border-gray-400" />
                   <div className="w-full h-[60%] bg-cyan-300/40 border-t border-white/40"></div>
                 </div>
               </div>
-              <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Distilled H₂O</span>
+              <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-colors duration-300 group-hover:bg-cyan-500/20 group-hover:border-cyan-500/40">Distilled H₂O</span>
             </div>
 
             {/* Hypertonic */}
             <div className="flex flex-col items-center relative z-10">
               <div 
-                className={`flex flex-col items-center transition-all duration-300 group ${isTarget('hyper_drop') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''}`}
-                onClick={() => isTarget('hyper_drop') && handleElementClick('hyper_drop')}
+                className="flex flex-col items-center transition-all duration-300 group cursor-pointer"
+                onClick={() => handleElementClick('hyper_drop')}
               >
-                <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-transform duration-700 ${target === 'hyper_drop' && animating ? 'translate-x-[50px] -translate-y-[150px] rotate-[60deg]' : ''}`}>
+                <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-all duration-700 ease-in-out ${
+                    target === 'hyper_drop' && animating 
+                      ? 'translate-x-[50px] -translate-y-[150px] rotate-[60deg] scale-110 z-30' 
+                      : 'group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-blue-400 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] z-10'
+                  }`}
+                >
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-gray-200 rounded-t border border-gray-400" />
                   <div className="w-full h-[60%] bg-blue-500/40 border-t border-white/40"></div>
                 </div>
               </div>
-              <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">10% NaCl</span>
+              <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-colors duration-300 group-hover:bg-blue-600/20 group-hover:border-blue-500/40">10% NaCl</span>
             </div>
             
           </div>
@@ -129,10 +135,10 @@ const OsmosisBench = ({
             
             {/* Slide Prep Area */}
             <div 
-              className={`absolute -bottom-8 w-48 h-12 bg-white/10 border-2 border-white/30 rounded shadow-lg backdrop-blur-sm transition-all flex items-center justify-center z-30 ${!hasSample && isTarget('slide') ? 'cursor-pointer pulse-glow hover:-translate-y-1' : ''}`}
-              onClick={() => isTarget('slide') && handleElementClick('slide')}
+              className={`absolute -bottom-8 w-48 h-12 bg-white/10 border-2 border-white/30 rounded shadow-lg backdrop-blur-sm transition-all duration-300 flex items-center justify-center z-30 cursor-pointer hover:bg-white/20 hover:border-white/60 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:-translate-y-1`}
+              onClick={() => handleElementClick('slide')}
             >
-              <div className="w-8 h-8 rounded-full border border-white/40 bg-white/5 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border border-white/40 bg-white/5 flex items-center justify-center shadow-inner">
                 {hasSample && <div className="w-2 h-2 bg-red-500/50 rounded-full blur-[1px]"></div>}
               </div>
               <span className="absolute -bottom-10 text-[11px] font-bold text-white/90 px-4 py-1 bg-black/40 rounded-full border border-white/10 whitespace-nowrap shadow-md">Microscope Stage</span>
@@ -141,7 +147,6 @@ const OsmosisBench = ({
             {/* Huge Lens View */}
             <div className="relative w-64 h-64 rounded-full border-[12px] border-gray-800 shadow-[0_15px_35px_rgba(0,0,0,0.5),_inset_0_0_60px_rgba(0,0,0,0.9)] overflow-hidden bg-[#e2e8f0] flex items-center justify-center z-20 -translate-y-8">
               
-              {/* FIXED: Tint opacities bumped up so the fluid color changes are more noticeable */}
               <div className={`absolute inset-0 transition-colors duration-1000 z-10 pointer-events-none mix-blend-multiply ${
                 solutionType === 'Hypertonic' ? 'bg-blue-400/40' : 
                 solutionType === 'Hypotonic' ? 'bg-cyan-300/40' : 
@@ -160,7 +165,6 @@ const OsmosisBench = ({
                 <RedBloodCell state={cellState} />
               </div>
               
-              {/* FIXED: Capillary Wash is now tied to the local 1.5s state, and blur reduced to preserve color */}
               {wash.active && (
                 <div className="absolute inset-0 z-30 pointer-events-none rounded-full overflow-hidden">
                   <div 

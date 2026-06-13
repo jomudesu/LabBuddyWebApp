@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FlaskRound as Flask, Search, Filter, X, ArrowDownAZ, LayoutGrid, BarChart2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { FlaskRound as Flask, Search, Filter, X, ArrowDownAZ, LayoutGrid, BarChart2, CheckCircle } from 'lucide-react';
 import { useExperiments } from '../backend/Firebase/useExperiments';
 import { useProgress } from '../backend/Firebase/useProgress';
 
@@ -12,7 +12,6 @@ const Experiments = () => {
 
   const highlightExpId = location.state?.highlightExpId;
 
-  // ─── STATE MANAGEMENT ───
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -21,13 +20,18 @@ const Experiments = () => {
     sortBy: 'default'
   });
   
-  const [experimentToRetry, setExperimentToRetry] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    if (location.state?.successMsg) {
+      setSuccessMessage(location.state.successMsg);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const categories = useMemo(() => ['All', ...new Set(experiments?.map(e => e.category) || [])], [experiments]);
   const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
-  // ─── FILTERING & SORTING ENGINE ───
   const processedExperiments = useMemo(() => {
     if (!experiments) return [];
 
@@ -38,11 +42,8 @@ const Experiments = () => {
       return matchesSearch && matchesCategory && matchesDifficulty;
     });
 
-    if (filters.sortBy === 'a-z') {
-      result.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (filters.sortBy === 'z-a') {
-      result.sort((a, b) => b.title.localeCompare(a.title));
-    }
+    if (filters.sortBy === 'a-z') result.sort((a, b) => a.title.localeCompare(b.title));
+    else if (filters.sortBy === 'z-a') result.sort((a, b) => b.title.localeCompare(a.title));
 
     return result;
   }, [experiments, searchQuery, filters]);
@@ -72,25 +73,22 @@ const Experiments = () => {
     setSearchQuery('');
   };
 
+  // Centralized Navigation & Cache Wiping Logic
   const handleStart = async (exp) => {
-    await updateExperimentStatus(exp.id, 'in_progress');
-    navigate(`/experiment/${exp.id}`);
-  };
-
-  const handleComplete = async (id) => {
-    await updateExperimentStatus(id, 'completed');
-    setSuccessMessage('Experiment successfully marked as completed!');
-  };
-
-  const handleRetryRequest = (id) => {
-    setExperimentToRetry(id);
-  };
-
-  const confirmRetry = async () => {
-    if (experimentToRetry) {
-      await updateExperimentStatus(experimentToRetry, 'not_started');
-      setExperimentToRetry(null);
+    const status = getStatus(exp.id);
+    
+    // 1. If starting fresh OR reviewing, wipe the browser's session storage completely
+    if (status === 'not_started' || status === 'completed') {
+      sessionStorage.removeItem(`lab_buddy_sim_${exp.id}`);
     }
+
+    // 2. Only update the database to 'in_progress' if it's a brand new attempt
+    if (status === 'not_started') {
+      await updateExperimentStatus(exp.id, 'in_progress');
+    }
+    
+    // 3. Launch the lab!
+    navigate(`/experiment/${exp.id}`);
   };
 
   if (loading) {
@@ -129,7 +127,6 @@ const Experiments = () => {
           <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Laboratory Hub</h1>
         </div>
 
-        {/* ─── CONTROL BAR ─── */}
         <div className="flex flex-col md:flex-row gap-4 mb-4 z-20 relative">
           <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
@@ -160,7 +157,6 @@ const Experiments = () => {
           </button>
         </div>
 
-        {/* ─── EXPANDABLE FILTER PANEL ─── */}
         <div className={`transition-all duration-500 ease-in-out overflow-hidden ${showFilters ? 'max-h-[400px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <div className="flex justify-between items-center mb-4">
@@ -218,7 +214,6 @@ const Experiments = () => {
           </div>
         )}
 
-        {/* ─── EXPERIMENT CARDS GRID ─── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {processedExperiments.map(exp => {
             const status = getStatus(exp.id);
@@ -262,18 +257,13 @@ const Experiments = () => {
 
                 <div className="mt-auto flex gap-3 relative z-10">
                   {status !== 'completed' && (
-                    <button onClick={() => handleStart(exp)} className="flex-1 bg-gray-500 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                    <button onClick={() => handleStart(exp)} className="flex-1 bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                       {status === 'in_progress' ? 'Continue Protocol' : 'Start Experiment'}
                     </button>
                   )}
-                  {status === 'in_progress' && (
-                    <button onClick={() => handleComplete(exp.id)} className="flex-1 bg-green-500 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-green-600 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                      Mark Done
-                    </button>
-                  )}
                   {status === 'completed' && (
-                    <button onClick={() => handleRetryRequest(exp.id)} className="flex-1 bg-gray-100 text-gray-600 font-semibold py-2.5 rounded-xl text-sm hover:bg-gray-200 hover:text-gray-900 border border-gray-200 transition-all duration-300">
-                      Review / Retry
+                    <button onClick={() => handleStart(exp)} className="flex-1 bg-indigo-50 text-indigo-700 font-bold py-2.5 rounded-xl text-sm hover:bg-indigo-100 border border-indigo-200 transition-all duration-300 shadow-sm flex items-center justify-center gap-2">
+                      Review Simulation
                     </button>
                   )}
                 </div>
@@ -281,37 +271,6 @@ const Experiments = () => {
             );
           })}
         </div>
-
-        {/* ─── CUSTOM CONFIRMATION MODAL ─── */}
-        {experimentToRetry && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden scale-100 animate-fade-in-up">
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertTriangle className="text-red-600" size={32} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Retry Experiment?</h3>
-                <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                  Are you sure you want to retry this experiment? Your previous progress and telemetry data will be completely reset.
-                </p>
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => setExperimentToRetry(null)}
-                    className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={confirmRetry}
-                    className="flex-1 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 hover:shadow-lg hover:-translate-y-0.5 transition-all"
-                  >
-                    Yes, Reset
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ─── CUSTOM SUCCESS MODAL ─── */}
         {successMessage && (

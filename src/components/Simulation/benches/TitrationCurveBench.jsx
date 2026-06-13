@@ -10,9 +10,6 @@ const TitrationCurveBench = ({
   const { pH, volumeAdded, beakerPlaced, probeLowered, isComplete } = simState;
   const { animating, showDrop } = uiState;
 
-  const target = currentStep?.targetElement;
-  const isTarget = (id) => target === id && !isComplete;
-
   // Generate the full logarithmic curve points for the SVG background track
   const generateCurvePoints = () => {
     const pts = [];
@@ -53,7 +50,7 @@ const TitrationCurveBench = ({
 
       <div className="relative z-10 w-full flex flex-col items-center justify-start flex-1 mt-2">
         
-        {/* ── Top Apparatus Section (Bulletproof Percentage Layout) ── */}
+        {/* ── Top Apparatus Section ── */}
         <div className="relative w-full max-w-[500px] h-[260px] mb-6 mx-auto">
           
           <div className="absolute bottom-[0px] left-1/2 -translate-x-1/2 w-[80%] h-10 bg-black/20 rounded-[100%] blur-md z-0" />
@@ -71,29 +68,30 @@ const TitrationCurveBench = ({
           {/* 2. Burette */}
           <div className="absolute bottom-[40px] left-[0%] -translate-x-1/2 flex flex-col items-center z-40">
             <div
-              className={`flex flex-col items-center transition-all duration-300 ease-out group ${isTarget('burette') ? 'cursor-pointer pulse-glow hover:-translate-y-1' : ''}`}
-              onClick={() => isTarget('burette') && handleElementClick('burette')}
+              className="flex flex-col items-center transition-all duration-300 ease-out group cursor-pointer"
+              onClick={() => handleElementClick('burette')}
             >
-              <div className="relative w-8 h-40 bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7)] border border-white/70 overflow-hidden">
-                <div className="absolute bottom-0 w-full transition-all duration-700 bg-white/60 opacity-90" style={{ height: `${100 - (volumeAdded / 50 * 100)}%` }} />
-                {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
-                  <div key={pct} className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${pct}%`, width: pct % 20 === 0 ? '40%' : '20%' }} />
-                ))}
+              <div className="flex flex-col items-center transition-all duration-300 group-hover:-translate-y-2 group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+                <div className="relative w-8 h-40 bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7)] border border-white/70 overflow-hidden group-hover:border-white">
+                  <div className="absolute bottom-0 w-full transition-all duration-700 bg-white/60 opacity-90" style={{ height: `${100 - (volumeAdded / 50 * 100)}%` }} />
+                  {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
+                    <div key={pct} className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${pct}%`, width: pct % 20 === 0 ? '40%' : '20%' }} />
+                  ))}
+                </div>
+                <div className="w-6 h-3 bg-gradient-to-b from-gray-300 to-gray-500 rounded shadow-md z-10 border border-white/40 group-hover:brightness-125" />
+                <div className="w-1.5 h-6 bg-gradient-to-b from-gray-200 to-white border-x border-gray-400 z-10 group-hover:brightness-125" />
               </div>
-              <div className="w-6 h-3 bg-gradient-to-b from-gray-300 to-gray-500 rounded shadow-md z-10 border border-white/40" />
-              <div className="w-1.5 h-6 bg-gradient-to-b from-gray-200 to-white border-x border-gray-400 z-10" />
             </div>
             <span className="absolute -bottom-10 text-[11px] font-bold text-white/90 px-3 py-1 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap">0.1M NaOH</span>
           </div>
 
           {/* 3. Beaker */}
           <div 
-            className={`absolute flex flex-col items-center transition-all duration-1000 ease-in-out z-30
-            ${beakerPlaced ? 'bottom-[67px] left-1/2 -translate-x-1/2' : 'bottom-[40px] left-[85%] -translate-x-1/2'}
-            ${isTarget('beaker') ? 'cursor-pointer pulse-glow hover:-translate-y-2' : ''}`}
-            onClick={() => isTarget('beaker') && handleElementClick('beaker')}
+            className={`absolute flex flex-col items-center transition-all duration-1000 ease-in-out z-30 group cursor-pointer
+            ${beakerPlaced ? 'bottom-[67px] left-1/2 -translate-x-1/2' : 'bottom-[40px] left-[85%] -translate-x-1/2'}`}
+            onClick={() => handleElementClick('beaker')}
           >
-            <div className="relative w-32 h-32 bg-white/30 backdrop-blur-md rounded-b-[1.2rem] border-x-2 border-b-2 border-white/70 shadow-[inset_0_4px_15px_rgba(255,255,255,0.6)] overflow-hidden">
+            <div className="relative w-32 h-32 bg-white/30 backdrop-blur-md rounded-b-[1.2rem] border-x-2 border-b-2 border-white/70 shadow-[inset_0_4px_15px_rgba(255,255,255,0.6)] overflow-hidden transition-all duration-300 group-hover:-translate-y-2 group-hover:scale-105 group-hover:shadow-[0_0_25px_rgba(255,255,255,0.5)] group-hover:border-white">
               <div className="absolute top-0 w-full h-2 bg-gradient-to-b from-white/60 to-transparent z-20" />
               <div className="absolute bottom-0 w-full transition-all duration-700 rounded-b-[1.2rem] bg-gradient-to-b from-blue-100/30 to-blue-200/40" style={{ height: `${beakerFill}%` }} />
               
@@ -109,22 +107,23 @@ const TitrationCurveBench = ({
                 <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-2 h-3 bg-white/90 rounded-full shadow-[0_0_8px_#ffffff] z-30" style={{ animation: 'straight-drop 0.5s ease-in forwards' }} />
               )}
             </div>
-            <span className={`absolute -bottom-10 text-[11px] font-bold text-white/90 px-3 py-1 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap transition-opacity duration-300 ${beakerPlaced ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>0.1M HCl</span>
+            <span className={`absolute -bottom-10 text-[11px] font-bold text-white/90 px-3 py-1 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap transition-opacity duration-300 ${beakerPlaced ? 'opacity-0 pointer-events-none' : 'opacity-100 group-hover:bg-white/20'}`}>0.1M HCl</span>
           </div>
 
-          {/* 4. pH Probe (Starts high at 85% Far Right, plunges to offset-center) */}
+          {/* 4. pH Probe */}
           <div 
-            className={`absolute flex flex-col items-center transition-all duration-1000 ease-in-out z-20 w-16
-            ${probeLowered ? 'top-[-10px] left-[57%] -translate-x-1/2' : 'top-[28px] left-[20%] -translate-x-1/2'}
-            ${isTarget('probe') ? 'cursor-pointer pulse-glow hover:-translate-y-2 pointer-events-auto' : 'pointer-events-none'}`}
-            onClick={() => isTarget('probe') && handleElementClick('probe')}
+            className={`absolute flex flex-col items-center transition-all duration-1000 ease-in-out z-20 w-16 group cursor-pointer
+            ${probeLowered ? 'top-[-10px] left-[57%] -translate-x-1/2' : 'top-[28px] left-[20%] -translate-x-1/2'}`}
+            onClick={() => handleElementClick('probe')}
           >
-            <div className="w-1 h-28 bg-gray-700 rounded-t-full shadow-inner" />
-            <div className="w-4 h-16 bg-blue-900 rounded-t-sm shadow-md flex justify-center">
-               <div className="w-2 h-16 bg-white/20" />
+            <div className="flex flex-col items-center transition-all duration-300 group-hover:-translate-y-2 group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+              <div className="w-1 h-28 bg-gray-700 rounded-t-full shadow-inner" />
+              <div className="w-4 h-16 bg-blue-900 rounded-t-sm shadow-md flex justify-center">
+                 <div className="w-2 h-16 bg-white/20" />
+              </div>
+              <div className="w-2 h-4 bg-gray-300 rounded-b-full border border-gray-400" />
             </div>
-            <div className="w-2 h-4 bg-gray-300 rounded-b-full border border-gray-400" />
-            <span className={`absolute -bottom-10 text-[11px] font-bold text-white/90 px-3 py-1 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap transition-opacity duration-300 ${probeLowered ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>pH Probe</span>
+            <span className={`absolute -bottom-10 text-[11px] font-bold text-white/90 px-3 py-1 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap transition-opacity duration-300 ${probeLowered ? 'opacity-0 pointer-events-none' : 'opacity-100 group-hover:bg-white/20'}`}>pH Probe</span>
           </div>
 
         </div>

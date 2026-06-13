@@ -12,8 +12,8 @@ const SystemSettings = () => {
   const [saveMessage, setSaveMessage] = useState('');
 
   const [profileData, setProfileData] = useState({ displayName: '', email: '' });
-  const [platformData, setPlatformData] = useState({ maintenanceMode: false, allowRegistrations: true, announcementBanner: '' });
-  const [originalPlatformData, setOriginalPlatformData] = useState({ maintenanceMode: false, allowRegistrations: true, announcementBanner: '' });
+  const [platformData, setPlatformData] = useState({ maintenanceMode: false, announcementBanner: '' });
+  const [originalPlatformData, setOriginalPlatformData] = useState({ maintenanceMode: false, announcementBanner: '' });
 
   const [isPlatformConfirmOpen, setIsPlatformConfirmOpen] = useState(false); 
   const [dangerModal, setDangerModal] = useState({ isOpen: false, actionType: null, title: '', expectedText: '', description: '' });
@@ -31,7 +31,6 @@ const SystemSettings = () => {
       if (data) {
         const currentSettings = { 
           maintenanceMode: data.maintenance_mode, 
-          allowRegistrations: data.allow_registrations,
           announcementBanner: data.announcement_banner || ''
         };
         setPlatformData(currentSettings);
@@ -68,7 +67,6 @@ const SystemSettings = () => {
 
       await supabase.from('system_preferences').update({
         maintenance_mode: platformData.maintenanceMode,
-        allow_registrations: platformData.allowRegistrations,
         announcement_banner: finalBannerText 
       }).eq('id', 'default');
       
@@ -192,7 +190,6 @@ const SystemSettings = () => {
                 <div className="p-6 flex-1 space-y-6">
                   <div className="space-y-4 max-w-2xl">
                     <CustomToggle label="Maintenance Mode" description="Locks out all non-admin users. Displays a maintenance screen on login." checked={platformData.maintenanceMode} onChange={(val) => setPlatformData({...platformData, maintenanceMode: val})} />
-                    <CustomToggle label="Allow New Registrations" description="When disabled, the 'Register' button on the landing page is hidden." checked={platformData.allowRegistrations} onChange={(val) => setPlatformData({...platformData, allowRegistrations: val})} />
                     <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl mt-4">
                       <label className="block text-sm font-bold text-slate-200 mb-2">Maintenance Announcement</label>
                       <textarea

@@ -1,15 +1,16 @@
 export const simulationConfigs = {
   acid_base_titration: {
+    id: 'acid_base_titration',
     title: "Acid-Base Titration",
     benchComponent: "TitrationBench",
+    difficulty: "Beginner", 
     
-    // Introduction Modal Content
     introduction: "Welcome to the Acid-Base Titration experiment. In this module, you will determine the unknown concentration of a solution by carefully adding a titrant (NaOH) until the neutralization point is reached. Pay close attention to the pH telemetry and the color of your indicator.",
     
-    equipment: ["Burette 50mL", "Beaker 250mL", "pH Meter", "Indicator (Phenolphthalein)"],
+    equipment: ["0.1M NaOH Solution", "Burette 50mL", "Beaker 250mL", "pH Meter", "Indicator (Phenolphthalein)"],
     
-    // Hover details for Inventory
     equipmentDetails: {
+      "0.1M NaOH Solution": "A strong base of known concentration used as the titrant to neutralize the acidic analyte.",
       "Burette 50mL": "A graduated glass tube with a tap at one end, used for delivering highly accurate volumes of a liquid.",
       "Beaker 250mL": "A cylindrical glass container for holding, mixing, and heating liquids.",
       "pH Meter": "An electronic telemetry device used to accurately measure the acidity or alkalinity of the solution in real-time.",
@@ -34,11 +35,10 @@ export const simulationConfigs = {
     steps: [
       {
         id: 'fill_burette',
-        targetElement: 'burette',
+        targetElement: 'naoh_bottle',
         animation: 'fill',
-        instruction: 'Click the burette to fill it with 0.1 M NaOH solution.',
+        instruction: 'Click the 0.1M NaOH bottle to fill the burette.',
         repeatable: false,
-        // Step Explanation
         explanation: "Filling the burette with a known concentration of Sodium Hydroxide (NaOH) prepares the system. This allows us to measure exactly how much base is needed to neutralize the acid."
       },
       {
@@ -67,7 +67,6 @@ export const simulationConfigs = {
       },
     ],
 
-    // Conclusion Modal Content
     conclusion: "Experiment Complete! You have successfully reached the equivalence point where the moles of acid equal the moles of base. The permanent pink color of the phenolphthalein confirms the solution has passed pH 7 into the basic range, successfully completing the titration.",
 
     computeState: (addedVolume, config) => {
@@ -93,6 +92,7 @@ export const simulationConfigs = {
     id: 'flame_test',
     title: 'Flame Test Analysis',
     benchComponent: 'FlameTestBench',
+    difficulty: 'Beginner', 
     
     introduction: "Welcome to the Flame Test Analysis simulation. In this module, you will observe the emission spectra of various metal ions. When heated, electrons in these atoms are excited and then fall back to lower energy levels, releasing photons of specific colors.",
     
@@ -109,7 +109,7 @@ export const simulationConfigs = {
     steps: [
       { 
         id: 'step_1', 
-        instruction: 'Turn on the Bunsen burner to establish a base blue flame.', 
+        instruction: 'Turn the gas valve to ignite the Bunsen burner.', 
         targetElement: 'burner_valve', 
         animation: 'ignite',
         explanation: "A clean blue flame indicates complete combustion of the gas. This is crucial because a yellow or orange safety flame would mask the delicate colors of our chemical samples."
@@ -160,13 +160,12 @@ export const simulationConfigs = {
     id: 'crystal_growth',
     title: 'Crystal Growth (Copper Sulfate)',
     benchComponent: 'CrystalGrowthBench',
+    difficulty: 'Intermediate', 
     
-    // Introduction Modal Content
     introduction: "Welcome to the Crystal Growth simulation. In this module, you will explore how temperature affects solubility by creating a supersaturated solution of Copper(II) Sulfate (CuSO₄). By carefully cooling the solution, you will observe the fascinating process of crystallization around a seed.",
     
     equipment: ['Hot Plate', 'Beaker 250mL', 'CuSO₄ Powder', 'Stirring Rod', 'Seed Crystal'],
     
-    // Hover details for Inventory
     equipmentDetails: {
       "Hot Plate": "An adjustable electronic heating source used to safely and uniformly heat liquids.",
       "Beaker 250mL": "A glass container holding distilled water, acting as the solvent for this experiment.",
@@ -181,7 +180,6 @@ export const simulationConfigs = {
         instruction: 'Turn on the hot plate to heat the water to 80°C.', 
         targetElement: 'hot_plate', 
         animation: 'heat',
-        // Step Explanations
         explanation: "Heating the water increases the kinetic energy of the solvent molecules. This increased energy allows significantly more solute to dissolve than would be possible at room temperature."
       },
       { 
@@ -214,15 +212,13 @@ export const simulationConfigs = {
       }
     ],
 
-    // Conclusion Modal Content
     conclusion: "Experiment Complete! You have successfully grown a massive Copper(II) Sulfate crystal. This demonstrates the core chemical principles of temperature-dependent solubility, supersaturation, and nucleation. Remember: in real life, the slower a solution is allowed to cool, the larger and more flawless the resulting crystal will be.",
 
     computeState: (actionState) => {
-      // actionState tracks the number of completed steps
       return {
         isHeaterOn: actionState >= 1 && actionState < 5,
-        temperature: actionState >= 1 && actionState < 5 ? 80 : 25, // Heats up, then cools down
-        waterColor: actionState >= 2 ? 'rgba(37, 99, 235, 0.7)' : 'rgba(255, 255, 255, 0.2)', // Turns blue when powder added
+        temperature: actionState >= 1 && actionState < 5 ? 80 : 25, 
+        waterColor: actionState >= 2 ? 'rgba(37, 99, 235, 0.7)' : 'rgba(255, 255, 255, 0.2)', 
         saturation: actionState >= 3 ? 'Saturated' : actionState >= 2 ? 'Mixing' : 'None',
         crystalState: actionState >= 5 ? 'grown' : actionState >= 4 ? 'seed' : 'none',
         isComplete: actionState >= 5
@@ -234,6 +230,7 @@ export const simulationConfigs = {
     id: 'electrolysis_of_water',
     title: 'Electrolysis of Water',
     benchComponent: 'ElectrolysisBench',
+    difficulty: 'Advanced', 
     
     introduction: "Welcome to the Electrolysis of Water simulation. In this experiment, you will use electrical energy to drive a non-spontaneous chemical reaction, splitting liquid water into hydrogen and oxygen gases. Pay close attention to the volume of gas collected at each electrode.",
     
@@ -298,6 +295,7 @@ export const simulationConfigs = {
     id: 'osmosis_in_cells',
     title: 'Osmosis in Cells',
     benchComponent: 'OsmosisBench',
+    difficulty: 'Intermediate',
     
     introduction: "Welcome to the Osmosis in Cells simulation. In this module, you will observe the effects of different solute concentrations on mammalian red blood cells. By applying isotonic, hypotonic, and hypertonic solutions, you will see firsthand how water moves across a selectively permeable membrane to achieve equilibrium.",
     
@@ -359,6 +357,7 @@ export const simulationConfigs = {
     id: 'paper_chromatography',
     title: 'Paper Chromatography',
     benchComponent: 'ChromatographyBench',
+    difficulty: 'Beginner', 
     
     introduction: "Welcome to the Paper Chromatography simulation. In this module, you will separate a mixture of pigments found in black ink using capillary action. By observing how different pigments travel at different rates, you will explore the fundamental principles of the mobile and stationary phases.",
     
@@ -422,6 +421,7 @@ export const simulationConfigs = {
     id: 'ph_scale_measurement',
     title: 'pH Scale Measurement',
     benchComponent: 'PHScaleBench',
+    difficulty: 'Beginner',
     
     introduction: "Welcome to the pH Scale Measurement simulation. In this module, you will test various household and laboratory liquids using Universal Indicator paper. By classifying these liquids as acids, bases, or neutral, you will gain a practical understanding of the pH scale and hydrogen ion concentrations.",
     
@@ -486,6 +486,7 @@ export const simulationConfigs = {
     id: 'titration_curves',
     title: 'Titration Curves',
     benchComponent: 'TitrationCurveBench',
+    difficulty: 'Advanced', 
     
     introduction: "Welcome to the Titration Curves simulation. In this advanced module, you will perform a strong acid-strong base titration while continuously logging the pH. By plotting pH against the volume of titrant added, you will generate a titration curve and visually identify the precise equivalence point.",
     
@@ -558,5 +559,3 @@ export const simulationConfigs = {
     }
   }
 };
-
-

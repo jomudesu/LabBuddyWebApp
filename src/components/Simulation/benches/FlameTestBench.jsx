@@ -43,7 +43,7 @@ const FlameTestBench = ({
   if ((stepNumber === 2 && wirePos === 'cu') || stepNumber === 3 || (stepNumber === 4 && wirePos === 'flame')) {
     tipColor = 'border-teal-400 bg-teal-400 shadow-[0_0_8px_#2dd4bf]';
   } else if (isComplete || (stepNumber === 4 && wirePos === 'sr') || stepNumber === 5) {
-    tipColor = 'border-red-400 bg-red-400 shadow-[0_0_8px_#f87171]'; 
+    tipColor = 'border-rose-400 bg-rose-400 shadow-[0_0_8px_#f87171]'; 
   }
 
   const displayColor = flameColor === 'green' ? '#4ade80' : 
@@ -57,7 +57,6 @@ const FlameTestBench = ({
 
       <div className="relative z-10 w-full flex flex-col items-center justify-center mt-12">
         
-        {/* ADDED mb-20 to lift the whole bench up */}
         <div className="flex justify-center items-end gap-12 h-72 relative w-full max-w-lg mb-20">
           
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-full h-12 bg-black/20 rounded-[100%] blur-md z-0" />
@@ -84,29 +83,27 @@ const FlameTestBench = ({
           <div className="flex gap-6 z-10 mb-4">
             
             {/* Cu (II) */}
-            <div className="flex flex-col items-center relative z-10">
-              <div 
-                className={`flex flex-col items-center cursor-pointer transition-all duration-300 group ${currentStep?.targetElement === 'sample_cu' ? 'pulse-glow hover:-translate-y-2' : ''}`}
-                onClick={() => handleElementClick('sample_cu')}
-              >
-                <div className="w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end">
+            <div className="flex flex-col items-center relative z-10 group cursor-pointer" onClick={() => handleElementClick('sample_cu')}>
+              <div className="flex flex-col items-center transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-105">
+                <div className="w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-all duration-300 group-hover:border-teal-300 group-hover:shadow-[0_0_20px_rgba(45,212,191,0.5)]">
                   <div className="w-full h-1/2 bg-teal-400/80 rounded-b-lg"></div>
                 </div>
               </div>
-              <span className="absolute -bottom-20 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Cu (II)</span>
+              <span className="absolute -bottom-20 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-all duration-300 group-hover:bg-teal-500/20 group-hover:border-teal-500/30">
+                Cu (II)
+              </span>
             </div>
 
             {/* Sr (II) */}
-            <div className="flex flex-col items-center relative z-10">
-              <div 
-                className={`flex flex-col items-center cursor-pointer transition-all duration-300 group ${currentStep?.targetElement === 'sample_sr' ? 'pulse-glow hover:-translate-y-2' : ''}`}
-                onClick={() => handleElementClick('sample_sr')}
-              >
-                <div className="w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end">
-                  <div className="w-full h-1/2 bg-red-400/80 rounded-b-lg"></div>
+            <div className="flex flex-col items-center relative z-10 group cursor-pointer" onClick={() => handleElementClick('sample_sr')}>
+              <div className="flex flex-col items-center transition-all duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-105">
+                <div className="w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-all duration-300 group-hover:border-rose-300 group-hover:shadow-[0_0_20px_rgba(244,63,94,0.5)]">
+                  <div className="w-full h-1/2 bg-rose-400/80 rounded-b-lg"></div>
                 </div>
               </div>
-              <span className="absolute -bottom-20 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Sr (II)</span>
+              <span className="absolute -bottom-20 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-all duration-300 group-hover:bg-rose-500/20 group-hover:border-rose-500/30">
+                Sr (II)
+              </span>
             </div>
             
           </div>
@@ -119,8 +116,8 @@ const FlameTestBench = ({
 
               <div 
                 className={`absolute bottom-full translate-y-1 w-12 h-32 rounded-[100%] origin-bottom transition-all duration-700 ease-in-out cursor-pointer flex justify-center z-20 ${
-                  !isBurnerOn ? 'opacity-0 scale-y-0' : 'opacity-90 scale-y-100'
-                } ${currentStep?.targetElement === 'flame' ? 'ring-4 ring-yellow-400/50 rounded-full' : ''}`}
+                  !isBurnerOn ? 'opacity-0 scale-y-0' : 'opacity-90 scale-y-100 hover:scale-x-110 hover:brightness-125 hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]'
+                }`}
                 style={{ 
                   background: `radial-gradient(ellipse at bottom, #ffffff 10%, ${displayColor} 50%, transparent 70%)`,
                   filter: `blur(2px) drop-shadow(0 0 15px ${displayColor})`
@@ -134,9 +131,7 @@ const FlameTestBench = ({
               
               <div className="w-16 h-4 bg-gradient-to-b from-gray-600 to-gray-800 rounded-t-lg z-30 relative flex justify-center">
                  <div 
-                   className={`absolute -left-3 top-1 w-6 h-2 bg-yellow-600 rounded cursor-pointer transition-all hover:brightness-110 ${
-                     currentStep?.targetElement === 'burner_valve' ? 'pulse-glow ring-2 ring-yellow-300' : ''
-                   }`}
+                   className="absolute -left-3 top-1 w-6 h-2 bg-yellow-600 rounded cursor-pointer transition-all duration-300 hover:scale-125 hover:brightness-125 hover:shadow-[0_0_15px_rgba(202,138,4,0.6)]"
                    onClick={() => handleElementClick('burner_valve')}
                  ></div>
               </div>

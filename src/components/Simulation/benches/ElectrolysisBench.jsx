@@ -23,17 +23,22 @@ const ElectrolysisBench = ({
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[90%] h-12 bg-black/30 rounded-[100%] blur-md z-0" />
 
           {/* ── Left: Electrolyte Bottle ── */}
-          <div className="flex flex-col items-center relative z-10">
+          <div className="flex flex-col items-center relative z-30">
             <div 
-              className={`flex flex-col items-center cursor-pointer transition-all duration-300 group ${currentStep?.targetElement === 'electrolyte' ? 'pulse-glow hover:-translate-y-2' : ''}`}
+              className="flex flex-col items-center cursor-pointer transition-all duration-300 group"
               onClick={() => handleElementClick('electrolyte')}
             >
-              <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-transform duration-700 ${target === 'electrolyte' && animating ? 'translate-x-[100px] -translate-y-[160px] rotate-[60deg]' : ''}`}>
+              <div className={`w-12 h-16 bg-white/30 backdrop-blur-md border border-white/50 rounded-lg shadow-inner relative overflow-hidden flex items-end transition-all duration-700 ease-in-out ${
+                  target === 'electrolyte' && animating 
+                    ? 'translate-x-[70px] -translate-y-[190px] rotate-[75deg] scale-110' 
+                    : 'group-hover:-translate-y-2 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] group-hover:border-white/80'
+                }`}
+              >
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-3 bg-gray-300 rounded-t-sm" />
                 <div className="w-full h-[50%] bg-transparent border-t border-white/40"></div>
               </div>
             </div>
-            <span className="absolute -bottom-20 text-[11px] font-bold text-white px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap">H₂SO₄</span>
+            <span className="absolute -bottom-20 text-[11px] font-bold text-white px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap">Diluted Sulfuric Acid H₂SO₄</span>
           </div>
 
           {/* ── Center: Beaker & Apparatus ── */}
@@ -55,10 +60,9 @@ const ElectrolysisBench = ({
                 {/* Cathode (Left) */}
                 <div className="relative flex flex-col items-center justify-end h-[160px]">
                   <div 
-                    className={`absolute top-0 w-8 h-28 bg-white/20 backdrop-blur-sm border-x-2 border-t-2 border-white/60 rounded-t-full overflow-hidden transition-all duration-700 cursor-pointer z-30 ${
+                    className={`absolute top-0 w-8 h-28 bg-white/20 backdrop-blur-sm border-x-2 border-t-2 border-white/60 !rounded-t-full overflow-hidden transition-all duration-700 ease-out cursor-pointer z-30 ${
                       tubesPlaced || (target === 'test_tubes' && animating) ? 'translate-y-0 opacity-100' : 
-                      (target === 'test_tubes' && !animating) ? '-translate-y-16 opacity-100 pulse-glow !rounded-t-full' : 
-                      'opacity-0 -translate-y-10 pointer-events-none'
+                      '-translate-y-16 opacity-90 hover:opacity-100 hover:-translate-y-14 hover:shadow-[0_0_20px_rgba(255,255,255,0.6)] hover:border-white'
                     }`}
                     onClick={() => handleElementClick('test_tubes')}
                   >
@@ -81,13 +85,10 @@ const ElectrolysisBench = ({
 
                 {/* Anode (Right) */}
                 <div className="relative flex flex-col items-center justify-end h-[160px]">
-                  
-                  {/* CHANGED: Brought back pulse-glow and added !rounded-t-full to force the correct shape */}
                   <div 
-                    className={`absolute top-0 w-8 h-28 bg-white/20 backdrop-blur-sm border-x-2 border-t-2 border-white/60 rounded-t-full overflow-hidden transition-all duration-700 cursor-pointer z-30 ${
+                    className={`absolute top-0 w-8 h-28 bg-white/20 backdrop-blur-sm border-x-2 border-t-2 border-white/60 !rounded-t-full overflow-hidden transition-all duration-700 ease-out cursor-pointer z-30 ${
                       tubesPlaced || (target === 'test_tubes' && animating) ? 'translate-y-0 opacity-100' : 
-                      (target === 'test_tubes' && !animating) ? '-translate-y-16 opacity-100 pulse-glow !rounded-t-full' : 
-                      'opacity-0 -translate-y-10 pointer-events-none'
+                      '-translate-y-16 opacity-90 hover:opacity-100 hover:-translate-y-14 hover:shadow-[0_0_20px_rgba(255,255,255,0.6)] hover:border-white'
                     }`}
                     onClick={() => handleElementClick('test_tubes')}
                   >
@@ -124,11 +125,12 @@ const ElectrolysisBench = ({
                  <span className="text-xs font-bold text-white shadow-sm">9V DC</span>
                </div>
 
+               {/* Power Switch */}
                <div 
-                 className={`mt-4 w-10 h-5 bg-black/50 rounded-full border border-white/20 relative cursor-pointer transition-all ${currentStep?.targetElement === 'power_switch' ? 'pulse-glow ring-2 ring-white/50' : ''}`}
+                 className="mt-4 w-10 h-5 bg-black/50 rounded-full border border-white/20 relative cursor-pointer transition-all duration-300 hover:scale-110 hover:border-white/60 hover:shadow-[0_0_15px_rgba(255,255,255,0.5)]"
                  onClick={() => handleElementClick('power_switch')}
                >
-                 <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-300 ${powerOn ? 'bg-green-400 right-0.5 shadow-[0_0_8px_#4ade80]' : 'bg-red-400 left-0.5'}`}></div>
+                 <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all duration-300 ${powerOn ? 'bg-green-400 right-0.5 shadow-[0_0_8px_#4ade80]' : 'bg-red-400 left-0.5'}`}></div>
                </div>
 
                <div className="absolute -bottom-3 left-3 w-4 h-3 bg-gray-400 rounded-b-sm border border-gray-500 flex items-center justify-center">
@@ -139,8 +141,9 @@ const ElectrolysisBench = ({
                </div>
             </div>
 
+            {/* Loose Wires */}
             <div 
-              className={`flex gap-4 mt-4 cursor-pointer transition-all duration-700 ${wiresConnected || (target === 'wires' && animating) ? 'opacity-0 -translate-y-6' : 'opacity-100'} ${currentStep?.targetElement === 'wires' ? 'pulse-glow hover:-translate-y-2' : ''}`}
+              className={`flex gap-4 mt-4 cursor-pointer transition-all duration-700 ${wiresConnected || (target === 'wires' && animating) ? 'opacity-0 -translate-y-6 pointer-events-none' : 'opacity-100 hover:-translate-y-2 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]'}`}
               onClick={() => handleElementClick('wires')}
             >
               <div className="w-1 h-8 bg-gray-800 rounded-b-full shadow-lg"></div>

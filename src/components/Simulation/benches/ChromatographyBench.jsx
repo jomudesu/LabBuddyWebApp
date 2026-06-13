@@ -7,17 +7,16 @@ const ChromatographyBench = ({
   handleElementClick,
   children 
 }) => {
-  const { hasLine, hasSpot, isSuspended, isCovered, isComplete } = simState;
+  const { hasLine, hasSpot, isSuspended, isCovered } = simState;
   const { animating } = uiState || {};
   
   const target = currentStep?.targetElement;
-  const isTarget = (id) => target === id && !isComplete;
 
   return (
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 flex flex-col justify-center relative overflow-hidden h-full min-h-[500px]">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
-      {/* NEW: Embedded CSS for the custom multi-stage dipping animation */}
+      {/* Embedded CSS for the custom multi-stage dipping animation */}
       <style>{`
         @keyframes dip-paper {
           0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
@@ -29,7 +28,6 @@ const ChromatographyBench = ({
 
       <div className="relative z-10 w-full flex flex-col items-center justify-center mt-6">
         
-        {/* Unified Baseline Layout */}
         <div className="flex justify-center items-end gap-12 h-[260px] relative w-full max-w-4xl mb-16">
           
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[80%] h-10 bg-black/20 rounded-[100%] blur-md z-0" />
@@ -40,8 +38,8 @@ const ChromatographyBench = ({
               className={`flex flex-col items-center transition-all duration-700 z-40 ${target === 'pencil' && animating ? 'translate-x-[200px] -translate-y-[20px]' : ''}`}
             >
               <div 
-                className={`flex flex-col items-center cursor-pointer transition-all duration-500 group origin-bottom-right ${isTarget('pencil') ? 'pulse-glow hover:-translate-y-2' : ''} ${target === 'pencil' && animating ? '-rotate-45' : ''}`}
-                onClick={() => isTarget('pencil') && handleElementClick('pencil')}
+                className={`flex flex-col items-center cursor-pointer transition-all duration-300 group origin-bottom-right hover:-translate-y-2 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(250,204,21,0.6)] ${target === 'pencil' && animating ? '-rotate-45' : ''}`}
+                onClick={() => handleElementClick('pencil')}
               >
                 <div className="w-3 h-4 bg-pink-400 rounded-t-sm shadow-inner" />
                 <div className="w-3 h-2 bg-gray-300" />
@@ -60,8 +58,8 @@ const ChromatographyBench = ({
               className={`flex flex-col items-center transition-all duration-700 z-40 ${target === 'ink_dropper' && animating ? 'translate-x-[104px] -translate-y-[20px]' : ''}`}
             >
               <div 
-                className={`flex flex-col items-center cursor-pointer transition-all duration-500 group origin-bottom-right ${isTarget('ink_dropper') ? 'pulse-glow hover:-translate-y-2' : ''} ${target === 'ink_dropper' && animating ? '-rotate-12' : ''}`}
-                onClick={() => isTarget('ink_dropper') && handleElementClick('ink_dropper')}
+                className={`flex flex-col items-center cursor-pointer transition-all duration-300 group origin-bottom-right hover:-translate-y-2 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] ${target === 'ink_dropper' && animating ? '-rotate-12' : ''}`}
+                onClick={() => handleElementClick('ink_dropper')}
               >
                 <div className="w-6 h-6 bg-gray-800 rounded-full z-10 shadow-md" />
                 <div className="w-3 h-16 bg-white/20 border border-white/50 rounded-b-sm relative z-0 -mt-2 flex flex-col justify-end overflow-hidden backdrop-blur-sm">
@@ -75,9 +73,9 @@ const ChromatographyBench = ({
           {/* 3. Chromatography Paper */}
           <div className="flex flex-col items-center relative z-10 w-16">
             <div 
-              className={`flex flex-col items-center cursor-pointer transition-all duration-700 ease-in-out group z-10 ${isTarget('paper') ? 'pulse-glow hover:-translate-y-2' : ''} ${isSuspended ? 'translate-x-[144px] -translate-y-6' : ''}`}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-300 ease-in-out group z-10 hover:-translate-y-2 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] ${isSuspended ? 'translate-x-[144px] -translate-y-6' : ''}`}
               style={target === 'paper' && animating ? { animation: 'dip-paper 0.7s ease-in-out forwards' } : {}}
-              onClick={() => isTarget('paper') && handleElementClick('paper')}
+              onClick={() => handleElementClick('paper')}
             >
               <div className="w-12 h-32 bg-[#f8f9fa] shadow-md border border-gray-200/50 relative overflow-hidden rounded-sm">
                 
@@ -96,7 +94,7 @@ const ChromatographyBench = ({
                 <div className={`absolute bottom-0 w-full bg-cyan-200/40 transition-all duration-[6000ms] ease-out border-t border-cyan-300/60 ${isCovered ? 'h-[90%]' : isSuspended ? 'h-[15%]' : 'h-0 opacity-0'}`} />
               </div>
             </div>
-            {/* CHANGED: Label now fades out instantly when the animation starts, instead of waiting for it to finish */}
+            {/* Label fades out instantly when the animation starts */}
             <span className={`absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-opacity duration-500 ${isSuspended || (target === 'paper' && animating) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>Filter Paper</span>
           </div>
 
@@ -116,8 +114,8 @@ const ChromatographyBench = ({
           {/* 5. Watch Glass */}
           <div className="flex flex-col items-center relative z-40 w-36">
             <div 
-              className={`flex flex-col items-center cursor-pointer transition-all duration-700 ease-in-out group z-40 ${isTarget('watch_glass') ? 'pulse-glow hover:-translate-y-2' : ''} ${isCovered || (target === 'watch_glass' && animating) ? '-translate-x-[184px] -translate-y-[158px]' : ''}`}
-              onClick={() => isTarget('watch_glass') && handleElementClick('watch_glass')}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-700 ease-in-out group z-40 hover:-translate-y-2 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] ${isCovered || (target === 'watch_glass' && animating) ? '-translate-x-[184px] -translate-y-[158px]' : ''}`}
+              onClick={() => handleElementClick('watch_glass')}
             >
               {/* Watch Glass curve shape */}
               <div className="w-36 h-6 bg-white/20 backdrop-blur-md rounded-b-[50%] border-b-2 border-x border-white/60 shadow-lg" />
