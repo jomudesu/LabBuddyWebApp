@@ -11,7 +11,6 @@ const SystemSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Added announcementBanner to the initial state
   const [profileData, setProfileData] = useState({ displayName: '', email: '' });
   const [platformData, setPlatformData] = useState({ maintenanceMode: false, allowRegistrations: true, announcementBanner: '' });
   const [originalPlatformData, setOriginalPlatformData] = useState({ maintenanceMode: false, allowRegistrations: true, announcementBanner: '' });
@@ -30,7 +29,6 @@ const SystemSettings = () => {
     const fetchSettings = async () => {
       const { data } = await supabase.from('system_preferences').select('*').eq('id', 'default').single();
       if (data) {
-        // ✨ FIX: Ensure we fetch the banner text from the database when settings load
         const currentSettings = { 
           maintenanceMode: data.maintenance_mode, 
           allowRegistrations: data.allow_registrations,
@@ -66,7 +64,6 @@ const SystemSettings = () => {
     setIsPlatformConfirmOpen(false);
     setIsSaving(true);
     try {
-      // If maintenance mode is OFF, erase the banner text
       const finalBannerText = platformData.maintenanceMode ? platformData.announcementBanner : '';
 
       await supabase.from('system_preferences').update({
@@ -156,7 +153,15 @@ const SystemSettings = () => {
       <div className="flex flex-col lg:flex-row gap-8 flex-1">
         <div className="lg:w-64 shrink-0">
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-2 flex flex-col gap-1">
-            {[{ id: 'profile', icon: User, label: 'Admin Profile' }, { id: 'platform', icon: Globe, label: 'Platform Preferences' }, { id: 'security', icon: ShieldAlert, label: 'Danger Zone', danger: true }].map((tab) => (
+            
+            {/* DYNAMIC TABS: Only Super Admins see Platform Preferences and Danger Zone */}
+            {[
+              { id: 'profile', icon: User, label: 'Admin Profile' },
+              ...(currentUser?.role === 'super_admin' ? [
+                { id: 'platform', icon: Globe, label: 'Platform Preferences' }, 
+                { id: 'security', icon: ShieldAlert, label: 'Danger Zone', danger: true }
+              ] : [])
+            ].map((tab) => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center w-full p-3 rounded-xl font-bold text-sm ${activeTab === tab.id ? (tab.danger ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20') : 'text-slate-400 hover:bg-slate-800/80'}`}>
                 <tab.icon size={18} className="mr-3 shrink-0" />{tab.label}
               </button>
@@ -180,7 +185,8 @@ const SystemSettings = () => {
               </form>
             )}
 
-            {activeTab === 'platform' && (
+            {/* Verify super_admin role for these tabs */}
+            {activeTab === 'platform' && currentUser?.role === 'super_admin' && (
               <form onSubmit={handlePlatformSubmit} className="flex flex-col h-full animate-fade-in">
                 <div className="p-6 border-b border-slate-700/50"><h2 className="text-xl font-bold text-slate-100 flex items-center"><Globe className="mr-2 text-emerald-400" size={20} /> Platform Preferences</h2></div>
                 <div className="p-6 flex-1 space-y-6">
@@ -205,7 +211,8 @@ const SystemSettings = () => {
               </form>
             )}
 
-            {activeTab === 'security' && (
+            {/* Verify super_admin role for these tabs */}
+            {activeTab === 'security' && currentUser?.role === 'super_admin' && (
               <div className="flex flex-col h-full animate-fade-in">
                 <div className="p-6 border-b border-rose-500/20 bg-rose-500/5"><h2 className="text-xl font-bold text-rose-400 flex items-center"><AlertTriangle className="mr-2" size={20} /> Targeted Data Resets</h2></div>
                 <div className="p-6 flex-1 space-y-4">

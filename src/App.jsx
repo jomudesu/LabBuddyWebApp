@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './backend/Firebase/AuthContext';
 import { ProgressProvider } from './backend/Firebase/useProgress'; 
-import { Bell } from 'lucide-react'; // ✨ Added this import for the banner icon
+import { Bell } from 'lucide-react'; 
 
 // Layouts
 import Sidebar from './components/Layout/Sidebar';
@@ -40,7 +40,9 @@ const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <Navigate to="/" />;
-  if (currentUser.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
+  
+  // Catch both admin roles and route them correctly
+  if (['admin', 'super_admin'].includes(currentUser.role)) return <Navigate to="/admin/dashboard" replace />;
   if (currentUser.role ===  'instructor') return <Navigate to="/instructor/dashboard" replace />;
   return children;
 };
@@ -49,7 +51,9 @@ const AdminRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <Navigate to="/" />;
-  if (currentUser.role !== 'admin') return <Navigate to="/dashboard" />; 
+  
+  // Allow both admins and super admins into this layout
+  if (!['admin', 'super_admin'].includes(currentUser.role)) return <Navigate to="/dashboard" />; 
   return children;
 };
 
@@ -58,7 +62,7 @@ const InstructorRoute = ({ children }) => {
   if (loading) return <LoadingScreen />;
   if (!currentUser) return <Navigate to="/" />;
   if (currentUser.role !== 'instructor') {
-    return <Navigate to={currentUser.role === 'admin' ? '/admin/dashboard' : '/dashboard'} />;
+    return <Navigate to={['admin', 'super_admin'].includes(currentUser.role) ? '/admin/dashboard' : '/dashboard'} />;
   }
   return children;
 };
@@ -72,7 +76,6 @@ const LoadingScreen = () => (
   </div>
 );
 
-// ✨ MODIFIED: Injects the global announcement banner into the student layout
 const AuthenticatedLayout = ({ children }) => {
   const { platformSettings } = useAuth();
   
@@ -81,8 +84,8 @@ const AuthenticatedLayout = ({ children }) => {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         
-        {/* GLOBAL ANNOUNCEMENT BANNER */}
-        {platformSettings?.announcementBanner && (
+        {/* Ensure banner only shows if maintenance mode is actually active */}
+        {platformSettings?.maintenanceMode && platformSettings?.announcementBanner && (
           <div className="bg-blue-600 text-white px-6 py-3 flex items-center justify-center shrink-0 shadow-md z-20 animate-fade-in-up">
             <Bell size={16} className="mr-2 text-blue-200 shrink-0" />
             <p className="text-sm font-medium tracking-wide text-center">
@@ -103,8 +106,6 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      
-      {/* ─── STUDENT ROUTES ─── */}
       <Route path="/dashboard" element={<ProtectedRoute><AuthenticatedLayout><Dashboard /></AuthenticatedLayout></ProtectedRoute>} />
       <Route path="/experiments" element={<ProtectedRoute><AuthenticatedLayout><Experiments /></AuthenticatedLayout></ProtectedRoute>} />
       <Route path="/library" element={<ProtectedRoute><AuthenticatedLayout><Library /></AuthenticatedLayout></ProtectedRoute>} />
@@ -114,7 +115,6 @@ function AppRoutes() {
       <Route path="/periodic-table" element={<ProtectedRoute><PeriodicTable /></ProtectedRoute>} />
       <Route path="/library/view/:id" element={<ProtectedRoute><AuthenticatedLayout><ResourceViewer /></AuthenticatedLayout></ProtectedRoute>} />
       
-      {/* ─── ADMIN ROUTES ─── */}
       <Route path="/admin/dashboard" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
       <Route path="/admin/accounts" element={<AdminRoute><AdminLayout><ManageAccounts /></AdminLayout></AdminRoute>} />
       <Route path="/admin/experiments" element={<AdminRoute><AdminLayout><ManageExperiments /></AdminLayout></AdminRoute>} />
@@ -122,7 +122,6 @@ function AppRoutes() {
       <Route path="/admin/reports" element={<AdminRoute><AdminLayout><ReportPrinting /></AdminLayout></AdminRoute>} />
       <Route path="/admin/settings" element={<AdminRoute><AdminLayout><SystemSettings /></AdminLayout></AdminRoute>} />
       
-      {/* ─── INSTRUCTOR ROUTES ─── */}
       <Route path="/instructor/dashboard" element={<InstructorRoute><InstructorLayout><InstructorDashboard /></InstructorLayout></InstructorRoute>} />
       <Route path="/instructor/students" element={<InstructorRoute><InstructorLayout><InstructorStudents /></InstructorLayout></InstructorRoute>} />
       <Route path="/instructor/experiments" element={<InstructorRoute><InstructorLayout><InstructorExperiments /></InstructorLayout></InstructorRoute>} />

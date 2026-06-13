@@ -2,13 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Filter, X, Shield, User, GraduationCap, Edit2, Trash2, 
   LayoutGrid, Users, CalendarDays, Clock, CheckCircle, AlertCircle, 
-  AlertTriangle, Plus, UserPlus, Unlock 
+  AlertTriangle, Plus, UserPlus, Unlock, Lock
 } from 'lucide-react';
 import { supabase } from '../../backend/Firebase/firebase'; 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
+import { useAuth } from '../../backend/Firebase/AuthContext'; 
 
 const ManageAccounts = () => {
+  const { currentUser } = useAuth(); 
+  
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -16,7 +19,6 @@ const ManageAccounts = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ role: 'All', section: 'All', status: 'All', sortBy: 'default' });
 
-  // Modals
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -26,7 +28,6 @@ const ManageAccounts = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Unlock Modal State
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [userToUnlock, setUserToUnlock] = useState(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -139,7 +140,6 @@ const ManageAccounts = () => {
     fetchUsers();
   };
 
-  // Custom Confirm Unlock Function
   const confirmUnlock = async () => {
     if (!userToUnlock) return;
     setIsUnlocking(true);
@@ -185,7 +185,12 @@ const ManageAccounts = () => {
     }
   };
 
-  const sections = useMemo(() => ['All', ...new Set(users.filter(u => u.role === 'student' && u.section && u.section !== '-').map(u => u.section))], [users]);
+  // Combine Student Sections and Instructor Handled Sections into one dropdown list
+  const sections = useMemo(() => {
+    const studentSections = users.filter(u => u.role === 'student' && u.section && u.section !== '-').map(u => u.section);
+    const instructorSections = users.filter(u => u.role === 'instructor' && Array.isArray(u.handledSections)).flatMap(u => u.handledSections);
+    return ['All', ...new Set([...studentSections, ...instructorSections])].sort();
+  }, [users]);
 
   const processedUsers = useMemo(() => {
     let result = users.filter(user => {
@@ -195,7 +200,12 @@ const ManageAccounts = () => {
       
       const matchesSearch = safeName.includes(query) || safeEmail.includes(query);
       const matchesRole = filters.role === 'All' || user.role === filters.role.toLowerCase();
-      const matchesSection = filters.section === 'All' || user.section === filters.section;
+      
+      // Check BOTH student.section AND instructor.handledSections during the filter
+      const matchesSection = filters.section === 'All' || 
+                             user.section === filters.section || 
+                             (Array.isArray(user.handledSections) && user.handledSections.includes(filters.section));
+                             
       const matchesStatus = filters.status === 'All' || (user.status || 'active') === filters.status.toLowerCase();
       
       return matchesSearch && matchesRole && matchesSection && matchesStatus;
@@ -214,6 +224,7 @@ const ManageAccounts = () => {
 
   const getRoleBadge = (role) => {
     switch (role) {
+      case 'super_admin': return <span className="flex items-center w-fit px-2.5 py-1 rounded-md border text-[11px] font-bold bg-amber-500/10 text-amber-400 border-amber-500/20 uppercase tracking-wider"><Shield size={12} className="mr-1.5" /> SUPER ADMIN</span>;
       case 'admin': return <span className="flex items-center w-fit px-2.5 py-1 rounded-md border text-[11px] font-bold bg-blue-500/10 text-blue-400 border-blue-500/20 uppercase tracking-wider"><Shield size={12} className="mr-1.5" /> ADMIN</span>;
       case 'instructor': return <span className="flex items-center w-fit px-2.5 py-1 rounded-md border text-[11px] font-bold bg-purple-500/10 text-purple-400 border-purple-500/20 uppercase tracking-wider"><GraduationCap size={12} className="mr-1.5" /> INSTRUCTOR</span>;
       case 'student': return <span className="flex items-center w-fit px-2.5 py-1 rounded-md border text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border-emerald-500/20 uppercase tracking-wider"><User size={12} className="mr-1.5" /> STUDENT</span>;
@@ -248,9 +259,17 @@ const ManageAccounts = () => {
                 <p className="text-[10px] text-amber-500 mt-1 font-medium">User will be forced to change this password on their first login.</p>
               </div>
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input required type="text" value={createFormData.displayName} onChange={(e) => setCreateFormData({ ...createFormData, displayName: e.target.value })} placeholder="Full Name" className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" /></div>
-              <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label><select value={createFormData.role} onChange={(e) => setCreateFormData({...createFormData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label>
+                <select value={createFormData.role} onChange={(e) => setCreateFormData({...createFormData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200">
+                  <option value="student">Student</option>
+                  <option value="instructor">Instructor</option>
+                  {currentUser?.role === 'super_admin' && <option value="admin">System Admin</option>}
+                  {currentUser?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
+                </select>
+              </div>
               {createFormData.role === 'student' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Class Section</label><input type="text" value={createFormData.section} onChange={(e) => setCreateFormData({...createFormData, section: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCHe-XX"/></div>)}
-              {createFormData.role === 'instructor' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assigned Sections</label><input type="text" value={createFormData.handledSections} onChange={(e) => setCreateFormData({...createFormData, handledSections: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCS-1A, BSCS-2A"/><p className="text-[10px] text-slate-500 mt-1">Separate with commas.</p></div>)}
+              {createFormData.role === 'instructor' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assigned Sections</label><input type="text" value={createFormData.handledSections} onChange={(e) => setCreateFormData({...createFormData, handledSections: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 uppercase" placeholder="e.g. BSCHe-XX, BSCHe-XX"/><p className="text-[10px] text-slate-500 mt-1">Separate with commas.</p></div>)}
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Initial Status</label><select value={createFormData.status} onChange={(e) => setCreateFormData({...createFormData, status: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200"><option value="active">Active</option><option value="pending">Pending</option></select></div>
               <div className="pt-4 flex gap-3"><button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl border border-slate-700">Cancel</button><button type="submit" disabled={isSaving} className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg disabled:opacity-50">{isSaving ? 'Creating...' : 'Create User'}</button></div>
             </form>
@@ -267,7 +286,15 @@ const ManageAccounts = () => {
             </div>
             <form onSubmit={handleSaveEdit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto form-scrollbar">
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input type="text" value={editingUser.displayName || ''} onChange={(e) => setEditingUser({ ...editingUser, displayName: e.target.value })} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200" /><p className="text-[10px] text-slate-500 mt-1">{editingUser.email}</p></div>
-              <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label><select value={editingUser.role} onChange={(e) => setEditingUser({...editingUser, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label>
+                <select value={editingUser.role} onChange={(e) => setEditingUser({...editingUser, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200">
+                  <option value="student">Student</option>
+                  <option value="instructor">Instructor</option>
+                  {currentUser?.role === 'super_admin' && <option value="admin">System Admin</option>}
+                  {currentUser?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
+                </select>
+              </div>
               {editingUser.role === 'student' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Class Section</label><input type="text" value={editingUser.section} onChange={(e) => setEditingUser({...editingUser, section: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200 uppercase" /></div>)}
               {editingUser.role === 'instructor' && (<div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Assigned Sections</label><input type="text" value={Array.isArray(editingUser.handledSections) ? editingUser.handledSections.join(', ') : (editingUser.handledSections || '')} onChange={(e) => setEditingUser({...editingUser, handledSections: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-slate-200 uppercase" /><p className="text-[10px] text-slate-500 mt-1">Separate multiple sections with commas.</p></div>)}
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Account Status</label><select value={editingUser.status || 'active'} onChange={(e) => setEditingUser({...editingUser, status: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-200"><option value="active">Active (Full Access)</option><option value="pending">Pending (Awaiting Approval)</option><option value="disabled">Disabled (Revoked Access)</option></select></div>
@@ -277,7 +304,7 @@ const ManageAccounts = () => {
         </div>
       )}
 
-      {/* ✨ UNLOCK DEVICES MODAL */}
+      {/* UNLOCK DEVICES MODAL */}
       {isUnlockModalOpen && userToUnlock && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-slate-900 border border-orange-500/30 w-full max-w-md rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.15)] overflow-hidden animate-fade-in-up">
@@ -329,9 +356,31 @@ const ManageAccounts = () => {
       <div className={`transition-all duration-500 overflow-hidden ${showFilters ? 'max-h-[400px] opacity-100 mb-6' : 'max-h-0 opacity-0 mb-0'}`}>
         <div className="bg-slate-800/80 p-6 rounded-2xl border border-slate-700/50"><div className="flex justify-between items-center mb-5"><h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Refine Directory</h3>{activeFilterCount > 0 && <button onClick={handleClearFilters} className="text-sm text-rose-400 flex items-center font-medium"><X size={16} className="mr-1" /> Clear All</button>}</div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div><label className="flex text-sm font-semibold text-slate-300 mb-2 items-center gap-2"><LayoutGrid size={16} className="text-blue-400"/> Role</label><select value={filters.role} onChange={(e) => setFilters({...filters, role: e.target.value})} className="w-full p-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-200"><option value="All">All Roles</option><option value="Admin">Admin</option><option value="Instructor">Instructor</option><option value="Student">Student</option></select></div>
+            <div>
+              <label className="flex text-sm font-semibold text-slate-300 mb-2 items-center gap-2"><LayoutGrid size={16} className="text-blue-400"/> Role</label>
+              <select value={filters.role} onChange={(e) => setFilters({...filters, role: e.target.value})} className="w-full p-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-200">
+                <option value="All">All Roles</option>
+                {currentUser?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
+                <option value="admin">System Admin</option>
+                <option value="instructor">Instructor</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
             <div><label className="flex text-sm font-semibold text-slate-300 mb-2 items-center gap-2"><Shield size={16} className="text-blue-400"/> Status</label><select value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})} className="w-full p-3 bg-slate-900/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-200"><option value="All">All Statuses</option><option value="Active">Active</option><option value="Pending">Pending</option><option value="Disabled">Disabled</option></select></div>
-            <div><label className="flex text-sm font-semibold text-slate-300 mb-2 items-center gap-2"><Users size={16} className="text-blue-400"/> Class Section</label><select value={filters.section} onChange={(e) => setFilters({...filters, section: e.target.value})} disabled={filters.role === 'Admin' || filters.role === 'Instructor'} className="w-full p-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-slate-200 disabled:opacity-50">{sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}</select></div>
+            
+            {/* Dynamic disabling based on selected role */}
+            <div>
+              <label className="flex text-sm font-semibold text-slate-300 mb-2 items-center gap-2"><Users size={16} className="text-blue-400"/> Class Section</label>
+              <select 
+                value={filters.section} 
+                onChange={(e) => setFilters({...filters, section: e.target.value})} 
+                disabled={['admin', 'super_admin'].includes(filters.role)} 
+                className="w-full p-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-slate-200 disabled:opacity-50"
+              >
+                {sections.map(sec => <option key={sec} value={sec}>{sec}</option>)}
+              </select>
+            </div>
+
             <div><label className="flex text-sm font-semibold text-slate-300 mb-2 items-center gap-2"><CalendarDays size={16} className="text-blue-400"/> Sort By</label><select value={filters.sortBy} onChange={(e) => setFilters({...filters, sortBy: e.target.value})} className="w-full p-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-slate-200"><option value="default">Default Order</option><option value="newest">Newest First</option><option value="oldest">Oldest First</option><option value="a-z">Name (A - Z)</option><option value="z-a">Name (Z - A)</option></select></div>
           </div>
         </div>
@@ -347,7 +396,12 @@ const ManageAccounts = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/50">
-              {processedUsers.length > 0 ? processedUsers.map((user) => (
+              {processedUsers.length > 0 ? processedUsers.map((user) => {
+                
+                const isTargetAdmin = ['admin', 'super_admin'].includes(user.role);
+                const canManage = currentUser?.role === 'super_admin' || !isTargetAdmin;
+
+                return (
                 <tr key={user.id} className="hover:bg-slate-800/80 group">
                   <td className="px-6 py-4"><div className="flex items-center"><div className="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center text-slate-300 font-bold mr-4 shrink-0">{(user.displayName || 'U').charAt(0).toUpperCase()}</div><div><div className="font-bold text-slate-200">{user.displayName || 'Unknown User'}</div><div className="text-xs text-slate-500 mt-0.5">{user.email}</div></div></div></td>
                   <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
@@ -356,25 +410,35 @@ const ManageAccounts = () => {
                   <td className="px-6 py-4 text-sm text-slate-400 font-medium">{user.createdAt}</td>
                   <td className="px-6 py-4 text-sm text-slate-400 font-medium">{user.lastLogin}</td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100">
-                      {user.status === 'pending' && <button onClick={() => handleApprove(user.id)} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"><CheckCircle size={18} /></button>}
-                      
-                      <button onClick={() => { setEditingUser(user); setIsEditModalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg"><Edit2 size={18} /></button>
-                      
-                      {/* ✨ CUSTOM UNLOCK BUTTON (Opens custom modal instead of plain alert) */}
-                      <button 
-                        onClick={() => { setUserToUnlock(user); setIsUnlockModalOpen(true); }} 
-                        className="p-2 text-slate-400 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
-                        title="Reset Authorized Devices"
-                      >
-                        <Unlock size={18} />
-                      </button>
+                    
+                    {canManage ? (
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {user.status === 'pending' && <button onClick={() => handleApprove(user.id)} className="p-2 text-emerald-400 hover:bg-emerald-500/10 rounded-lg"><CheckCircle size={18} /></button>}
+                        
+                        <button onClick={() => { setEditingUser(user); setIsEditModalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg"><Edit2 size={18} /></button>
+                        
+                        <button 
+                          onClick={() => { setUserToUnlock(user); setIsUnlockModalOpen(true); }} 
+                          className="p-2 text-slate-400 hover:text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
+                          title="Reset Authorized Devices"
+                        >
+                          <Unlock size={18} />
+                        </button>
 
-                      <button onClick={() => { setUserToDelete(user); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"><Trash2 size={18} /></button>
-                    </div>
+                        {currentUser?.id !== user.id && (
+                          <button onClick={() => { setUserToDelete(user); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"><Trash2 size={18} /></button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-500 font-bold uppercase tracking-widest flex justify-end items-center opacity-50">
+                        <Lock size={12} className="mr-1.5"/> Restricted
+                      </span>
+                    )}
+
                   </td>
                 </tr>
-              )) : !loading && (
+                )
+              }) : !loading && (
                 <tr><td colSpan="7" className="px-6 py-16 text-center text-slate-500"><div className="bg-slate-800/50 w-20 h-20 rounded-full flex mx-auto mb-4 items-center justify-center"><User size={32} className="text-slate-600" /></div><p className="text-lg font-bold text-slate-400">No accounts found</p><button onClick={handleClearFilters} className="mt-4 text-blue-400 font-bold hover:underline">Reset Filters</button></td></tr>
               )}
             </tbody>

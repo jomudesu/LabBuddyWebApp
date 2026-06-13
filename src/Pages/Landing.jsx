@@ -101,8 +101,9 @@ const Landing = () => {
     }
   };
 
-  const routeUser = (role) => {
-    if (role === 'admin') navigate('/admin/dashboard');
+const routeUser = (role) => {
+    // Allow both admin roles into the dashboard
+    if (role === 'admin' || role === 'super_admin') navigate('/admin/dashboard');
     else if (role === 'instructor') navigate('/instructor/dashboard');
     else navigate('/dashboard');
   };
@@ -122,7 +123,6 @@ const Landing = () => {
         setGeneratedOTP(code);
         setPendingRoutingRole(userData.role);
 
-        // Using Environment Variables safely!
         const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID; 
         const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID; 
         const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY; 
@@ -133,14 +133,16 @@ const Landing = () => {
           otp_code: code
         }, EMAILJS_PUBLIC_KEY);
 
-        if (!userData.has_accepted_dpa && userData.role !== 'admin') {
+        // Exclude both admins from DPA check
+        if (!userData.has_accepted_dpa && !['admin', 'super_admin'].includes(userData.role)) {
           setPendingUser(userData);
         }
         
         setShowOTP(true);
         setSuccessMessage(`Unrecognized device detected. A security code has been sent to ${email}.`);
       } else {
-        if (!userData.has_accepted_dpa && userData.role !== 'admin') {
+        // Exclude both admins from DPA check
+        if (!userData.has_accepted_dpa && !['admin', 'super_admin'].includes(userData.role)) {
           setPendingUser(userData);
           setShowDPAModal(true);
         } else {
@@ -248,10 +250,10 @@ const Landing = () => {
 
       {isMaintenanceMode && (
         <div className="w-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white py-3 px-6 flex items-center shadow-lg z-50">
-          <div className="flex items-center gap-3 mr-4"><div className="bg-white/20 p-1.5 rounded-full"><Wrench size={16} /></div><span className="font-bold text-xs uppercase tracking-widest opacity-95">Maintenance Notice</span></div>
+          <div className="flex items-center gap-3 mr-4"><div className="bg-white/20 p-1.5 rounded-full"><Wrench size={16} /></div><span className="font-bold text-xs uppercase tracking-widest opacity-95">Maintenance Notice: Only Authorized Users Can Access the Platform</span></div>
           <div className="h-6 w-px bg-white/30 mr-6" />
           <div ref={bannerContainerRef} className="flex-1 overflow-hidden whitespace-nowrap flex items-center relative">
-            <div ref={bannerTextRef} className={`font-bold text-sm ${shouldScroll ? 'animate-marquee' : 'w-full text-center'}`}>{platformSettings.announcementBanner}</div>
+            <div ref={bannerTextRef} className={`font-bold text-sm ${shouldScroll ? 'animate-marquee' : 'w-full'}`}>{platformSettings.announcementBanner}</div>
           </div>
         </div>
       )}
@@ -293,7 +295,7 @@ const Landing = () => {
                 <Sparkles className="ml-3 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity" size={24} />
               </div>
               <h2 className="text-5xl font-bold text-white mb-4 leading-tight animate-fade-in-up">Virtual Chemistry<br />Laboratory</h2>
-              <p className="text-xl text-blue-100 max-w-2xl mb-8 animate-fade-in-up animation-delay-200">
+              <p className="text-xl text-blue-100 max-w-2xl mt-8 animate-fade-in-up animation-delay-200">
                 Experience immersive science learning with interactive experiments, virtual lab equipment, and real-time simulations.
               </p>
             </div>

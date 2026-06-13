@@ -1,18 +1,9 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { 
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updatePassword
-} from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
 import { auth, supabase } from './firebase';
 
 const AuthContext = createContext();
-
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -23,41 +14,28 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const fetchPrefs = async () => {
       const { data } = await supabase.from('system_preferences').select('*').eq('id', 'default').single();
-      if (data) {
-        setPlatformSettings({ 
-          maintenanceMode: data.maintenance_mode, 
-          allowRegistrations: data.allow_registrations,
-          announcementBanner: data.announcement_banner 
-        });
-      }
+      if (data) setPlatformSettings({ maintenanceMode: data.maintenance_mode, allowRegistrations: data.allow_registrations, announcementBanner: data.announcement_banner });
     };
     fetchPrefs();
 
     const channel = supabase.channel('system_prefs_changes')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_preferences' }, (payload) => {
-        setPlatformSettings({ 
-          maintenanceMode: payload.new.maintenance_mode, 
-          allowRegistrations: payload.new.allow_registrations,
-          announcementBanner: payload.new.announcement_banner 
-        });
+        setPlatformSettings({ maintenanceMode: payload.new.maintenance_mode, allowRegistrations: payload.new.allow_registrations, announcementBanner: payload.new.announcement_banner });
       }).subscribe();
 
     return () => supabase.removeChannel(channel);
   }, []);
 
   useEffect(() => {
-    if (platformSettings?.maintenanceMode && currentUser && currentUser.role !== 'admin') {
-      signOut(auth).then(() => {
-        setCurrentUser(null);
-      });
+    // Check both admin roles
+    if (platformSettings?.maintenanceMode && currentUser && !['admin', 'super_admin'].includes(currentUser.role)) {
+      signOut(auth).then(() => setCurrentUser(null));
     }
   }, [platformSettings?.maintenanceMode, currentUser]);
 
-  // ─── LOGIN (SUPABASE SQL HYBRID) ───
   const login = async (email, password, options = { trustDevice: false }) => {
     try {
       setError(null);
-      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -69,12 +47,8 @@ export const AuthProvider = ({ children }) => {
       const userData = userRes.data;
       const freshPrefs = prefsRes.data;
 
-      if (userRes.error || !userData) {
-        await signOut(auth);
-        throw new Error("This account has been removed by an administrator.");
-      }
+      if (userRes.error || !userData) { await signOut(auth); throw new Error("This account has been removed by an administrator."); }
 
-      // 1. FIRST-LOGIN FORCED PASSWORD CHANGE
       if (userData.requires_password_change) {
         try {
           const scrambledPassword = Math.random().toString(36).slice(-10) + "aA1!@"; 
@@ -82,7 +56,7 @@ export const AuthProvider = ({ children }) => {
           await supabase.from('users').update({ requires_password_change: false }).eq('id', user.uid);
           await sendPasswordResetEmail(auth, email);
           await signOut(auth);
-          throw new Error(`FIRST_LOGIN_RESET: Account verified! For your security, you must set a permanent password. A secure reset link has been sent to ${email}. Don't forget to check your spam folder too!`);
+          throw new Error(`FIRST_LOGIN_RESET: Account verified! For your security, you must set a permanent password. A secure reset link has been sent to ${email}.`);
         } catch (resetErr) {
           if (resetErr.message.startsWith("FIRST_LOGIN_RESET:")) throw resetErr;
           await signOut(auth);
@@ -90,7 +64,6 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // 2. ZERO-TRUST DEVICE FINGERPRINTING
       let currentKnownDevices = userData.known_devices || [];
       let localDeviceId = localStorage.getItem('lab_buddy_device_id');
       let isNewDevice = false;
@@ -100,75 +73,43 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('lab_buddy_device_id', localDeviceId);
       }
 
-      if (userData.role !== 'admin' && !currentKnownDevices.includes(localDeviceId)) {
+      // Exclude both admins from Device Locking
+      if (!['admin', 'super_admin'].includes(userData.role) && !currentKnownDevices.includes(localDeviceId)) {
         if (currentKnownDevices.length >= 2) {
           await signOut(auth);
           throw new Error("SECURITY_LOCK: Unrecognized device detected. To prevent account theft and unauthorized sharing, Lab Buddy limits access to 2 authorized devices. Please contact an Administrator to reset your device authorizations.");
         } else {
-          // Check if we are doing a dry-run or a real login
           if (options.trustDevice) {
-            // User entered the OTP! Trust the device.
             currentKnownDevices.push(localDeviceId);
           } else {
-            // DRY RUN: Password is correct, but we need OTP. 
-            // Sign out immediately so the App Router doesn't pull them to the dashboard!
             await signOut(auth);
             return { userCredential: null, userData, isNewDevice: true };
           }
         }
       }
 
-      // 3. MAINTENANCE MODE
-      if (freshPrefs?.maintenance_mode && userData.role !== 'admin') {
+      // Exclude both admins from Maintenance block
+      if (freshPrefs?.maintenance_mode && !['admin', 'super_admin'].includes(userData.role)) {
         await signOut(auth); 
         throw new Error("System is currently undergoing maintenance. Please try again later.");
       }
 
-      // 4. DISABLED / PENDING
-      if (userData.status === 'disabled') {
-        await signOut(auth);
-        throw new Error("Your account has been disabled. Please contact the administrator.");
-      }
-
+      if (userData.status === 'disabled') { await signOut(auth); throw new Error("Your account has been disabled. Please contact the administrator."); }
       if (userData.status === 'pending') {
         await signOut(auth); 
-        const errorMsg = userData.role === 'instructor' 
-          ? "Your instructor account is pending admin approval." 
-          : `Your student account is pending Admin verification for Section: ${userData.section || '-'}`;
+        const errorMsg = userData.role === 'instructor' ? "Your instructor account is pending admin approval." : `Your student account is pending Admin verification for Section: ${userData.section || '-'}`;
         throw new Error(errorMsg);
       }
 
-      // 5. UPDATE LAST LOGIN & SAVE NEW DEVICES
-      await supabase.from('users').update({ 
-        last_login: new Date().toISOString(),
-        known_devices: currentKnownDevices
-      }).eq('id', user.uid);
-      
+      await supabase.from('users').update({ last_login: new Date().toISOString(), known_devices: currentKnownDevices }).eq('id', user.uid);
       return { userCredential, userData, isNewDevice: false }; 
     } catch (err) {
-      setError(err.message);
-      throw err;
+      setError(err.message); throw err;
     }
   };
 
-  const resetPassword = async (email) => {
-    try {
-      setError(null);
-      await sendPasswordResetEmail(auth, email);
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    }
-  };
+  const resetPassword = async (email) => { try { setError(null); await sendPasswordResetEmail(auth, email); } catch (err) { setError(err.message); throw err; } };
+  const logout = async () => { try { await signOut(auth); } catch (err) { setError(err.message); throw err; } };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -183,55 +124,26 @@ export const AuthProvider = ({ children }) => {
           const freshPrefs = prefsRes.data;
           
           if (customUserData) {
-            // If the user was signed out during an OTP Dry-Run, abort the listener to stop the Router!
             if (!auth.currentUser) return;
-
             if (customUserData.requires_password_change) {
-              await signOut(auth);
-              setCurrentUser(null);
-            } else if (freshPrefs?.maintenance_mode && customUserData.role !== 'admin') {
-              await signOut(auth);
-              setCurrentUser(null);
+              await signOut(auth); setCurrentUser(null);
+            } else if (freshPrefs?.maintenance_mode && !['admin', 'super_admin'].includes(customUserData.role)) {
+              await signOut(auth); setCurrentUser(null);
             } else if (customUserData.status === 'pending' || customUserData.status === 'disabled') {
-              await signOut(auth);
-              setCurrentUser(null);
+              await signOut(auth); setCurrentUser(null);
             } else {
-              setCurrentUser({ 
-                ...firebaseUser, 
-                ...customUserData,
-                displayName: customUserData.display_name, 
-                hasAcceptedDPA: customUserData.has_accepted_dpa
-              });
+              setCurrentUser({ ...firebaseUser, ...customUserData, displayName: customUserData.display_name, hasAcceptedDPA: customUserData.has_accepted_dpa });
             }
           } else {
-            await signOut(auth);
-            setCurrentUser(null);
+            await signOut(auth); setCurrentUser(null);
           }
-        } catch (err) {
-          setCurrentUser(null);
-        }
-      } else {
-        setCurrentUser(null);
-      }
+        } catch (err) { setCurrentUser(null); }
+      } else { setCurrentUser(null); }
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
 
-  const value = {
-    currentUser,
-    platformSettings,
-    loading,
-    error,
-    login,
-    resetPassword, 
-    logout
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  const value = { currentUser, platformSettings, loading, error, login, resetPassword, logout };
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };

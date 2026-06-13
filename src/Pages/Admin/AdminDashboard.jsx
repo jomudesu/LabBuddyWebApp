@@ -4,6 +4,9 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { supabase } from '../../backend/Firebase/firebase'; 
 
 const AdminDashboard = () => {
+  // The isMounted state guarantees Recharts only loads AFTER layout is painted
+  const [isMounted, setIsMounted] = useState(false);
+
   const [totalUsers, setTotalUsers] = useState(0);
   const [activeToday, setActiveToday] = useState(0);
   const [totalExperiments, setTotalExperiments] = useState(0);
@@ -18,13 +21,13 @@ const AdminDashboard = () => {
   const [loginCounts, setLoginCounts] = useState({});
   const [sessionCounts, setSessionCounts] = useState({});
 
-  // ─── SUPABASE REAL-TIME DATA FETCHING ───
   useEffect(() => {
+    setIsMounted(true); // Mount layout safely
+
     const fetchData = async () => {
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
 
-      // 1. Fetch Users
       const { data: users } = await supabase.from('users').select('*');
       if (users) {
         let students = 0, instructors = 0, admins = 0, activeCount = 0;
@@ -33,7 +36,7 @@ const AdminDashboard = () => {
         users.forEach(u => {
           if (u.role === 'student') students++;
           else if (u.role === 'instructor') instructors++;
-          else if (u.role === 'admin') admins++;
+          else if (u.role === 'admin' || u.role === 'super_admin') admins++;
 
           if (u.last_login) {
             const loginDate = new Date(u.last_login);
@@ -53,11 +56,9 @@ const AdminDashboard = () => {
         setLoginCounts(loginsByDate);
       }
 
-      // 2. Fetch Experiments
       const { count: expCount } = await supabase.from('experiments').select('*', { count: 'exact', head: true });
       setTotalExperiments(expCount || 0);
 
-      // 3. Fetch Progress
       const { data: progress } = await supabase.from('user_progress').select('*');
       if (progress) {
         let completed = 0;
@@ -77,7 +78,6 @@ const AdminDashboard = () => {
 
     fetchData();
 
-    // Re-fetch on any database changes
     const channel = supabase.channel('dashboard_sync')
       .on('postgres_changes', { event: '*', schema: 'public' }, () => fetchData())
       .subscribe();
@@ -143,21 +143,26 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-sm font-bold text-slate-100 flex items-center uppercase tracking-wider"><Activity className="mr-2 text-blue-400" size={18} />Platform Traffic (Last 7 Days)</h2>
           </div>
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trafficData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
-                  <linearGradient id="colorLogins" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={customTooltipStyle} itemStyle={{ color: '#e2e8f0' }} />
-                <Area type="monotone" dataKey="sessions" name="Exp. Sessions" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSessions)" />
-                <Area type="monotone" dataKey="logins" name="User Logins" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLogins)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="flex-1 w-full h-72">
+            
+            {/* Conditional Mounting for Area Chart */}
+            {isMounted && (
+              <ResponsiveContainer width="99%" height="100%">
+                <AreaChart data={trafficData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
+                    <linearGradient id="colorLogins" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={customTooltipStyle} itemStyle={{ color: '#e2e8f0' }} />
+                  <Area type="monotone" dataKey="sessions" name="Exp. Sessions" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSessions)" />
+                  <Area type="monotone" dataKey="logins" name="User Logins" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorLogins)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+
           </div>
         </div>
 
@@ -165,15 +170,20 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-slate-100 flex items-center uppercase tracking-wider"><PieChartIcon className="mr-2 text-purple-400" size={18} />Demographics</h2>
           </div>
-          <div className="flex-1 w-full relative flex items-center justify-center min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Tooltip contentStyle={customTooltipStyle} itemStyle={{ color: '#e2e8f0' }} />
-                <Pie data={distributionData} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={5} dataKey="value" stroke="none" labelLine={false} label={renderCustomizedLabel}>
-                  {distributionData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="flex-1 w-full relative flex items-center justify-center h-72">
+            
+            {/* Conditional Mounting for Pie Chart */}
+            {isMounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip contentStyle={customTooltipStyle} itemStyle={{ color: '#e2e8f0' }} />
+                  <Pie data={distributionData} cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={5} dataKey="value" stroke="none" labelLine={false} label={renderCustomizedLabel}>
+                    {distributionData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
               <span className="text-3xl font-black text-slate-100">{totalUsers}</span>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
