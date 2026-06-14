@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FlaskRound as Flask, Search, Filter, X, ArrowDownAZ, LayoutGrid, BarChart2, CheckCircle } from 'lucide-react';
+import { FlaskRound as Flask, Search, Filter, X, ArrowDownAZ, LayoutGrid, BarChart2, CheckCircle, Lock } from 'lucide-react';
 import { useExperiments } from '../backend/Firebase/useExperiments';
 import { useProgress } from '../backend/Firebase/useProgress';
+import { useAuth } from '../backend/Firebase/AuthContext'; 
 
 const Experiments = () => {
+  const { currentUser } = useAuth(); 
   const navigate = useNavigate();
   const location = useLocation();
   const { experiments, loading, error } = useExperiments();
@@ -29,13 +31,22 @@ const Experiments = () => {
     }
   }, [location, navigate]);
 
-  const categories = useMemo(() => ['All', ...new Set(experiments?.map(e => e.category) || [])], [experiments]);
+  // Filter the master experiment list down to ONLY modules assigned to this student's section
+  const assignedExperiments = useMemo(() => {
+    if (!experiments || !currentUser?.section) return [];
+    return experiments.filter(exp => {
+      const assignedTo = exp.assigned_sections || [];
+      return assignedTo.includes(currentUser.section);
+    });
+  }, [experiments, currentUser]);
+
+  // Ensure the category dropdown only shows subjects they actually have access to
+  const categories = useMemo(() => ['All', ...new Set(assignedExperiments.map(e => e.category).filter(Boolean))], [assignedExperiments]);
   const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
+  // Apply Search & Filters to the already-restricted assigned experiments list
   const processedExperiments = useMemo(() => {
-    if (!experiments) return [];
-
-    let result = experiments.filter(exp => {
+    let result = assignedExperiments.filter(exp => {
       const matchesSearch = exp.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = filters.category === 'All' || exp.category === filters.category;
       const matchesDifficulty = filters.difficulty === 'All' || exp.difficulty === filters.difficulty;
@@ -46,7 +57,7 @@ const Experiments = () => {
     else if (filters.sortBy === 'z-a') result.sort((a, b) => b.title.localeCompare(a.title));
 
     return result;
-  }, [experiments, searchQuery, filters]);
+  }, [assignedExperiments, searchQuery, filters]);
 
   useEffect(() => {
     if (highlightExpId && processedExperiments.length > 0) {
@@ -124,7 +135,12 @@ const Experiments = () => {
     <div className="bg-slate-100 min-h-screen w-full">
       <div className="p-8 max-w-7xl mx-auto relative">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Laboratory Hub</h1>
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Laboratory Hub</h1>
+            <p className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-2">
+              Viewing modules assigned to <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Section {currentUser?.section || 'None'}</span>
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-4 z-20 relative">
@@ -134,14 +150,16 @@ const Experiments = () => {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search experiments by title..." 
+              placeholder="Search assigned experiments..." 
               className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" 
+              disabled={assignedExperiments.length === 0}
             />
           </div>
           
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center justify-center px-6 py-3.5 rounded-xl font-bold transition-all duration-300 shadow-sm border ${
+            disabled={assignedExperiments.length === 0}
+            className={`flex items-center justify-center px-6 py-3.5 rounded-xl font-bold transition-all duration-300 shadow-sm border disabled:opacity-50 disabled:cursor-not-allowed ${
               showFilters || activeFilterCount > 0 
               ? 'bg-blue-600 text-white border-blue-600 shadow-blue-200 hover:bg-blue-700' 
               : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
@@ -205,72 +223,79 @@ const Experiments = () => {
           </div>
         </div>
 
-        {processedExperiments.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
-            <Flask className="mx-auto text-gray-300 mb-4" size={48} />
-            <h2 className="text-xl font-bold text-gray-600 mb-2">No experiments found</h2>
-            <p className="text-gray-400">Try adjusting your filters or search query.</p>
+        {/* Dynamic Empty States based on Assignment Status */}
+        {assignedExperiments.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm animate-fade-in-up">
+            <Lock className="mx-auto text-slate-300 mb-4" size={48} />
+            <h2 className="text-xl font-bold text-slate-800 mb-2">No Modules Assigned</h2>
+            <p className="text-slate-500 max-w-sm mx-auto">Your instructor has not posted any experiments for <strong className="text-slate-700">Section {currentUser?.section}</strong> yet. Check back later!</p>
+          </div>
+        ) : processedExperiments.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm animate-fade-in-up">
+            <Flask className="mx-auto text-slate-300 mb-4" size={48} />
+            <h2 className="text-xl font-bold text-slate-800 mb-2">No experiments found</h2>
+            <p className="text-slate-500">Try adjusting your filters or search query.</p>
             <button onClick={handleClearFilters} className="mt-4 text-blue-600 font-semibold hover:underline">Reset all filters</button>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {processedExperiments.map(exp => {
+              const status = getStatus(exp.id);
+              const isHighlighted = exp.id === highlightExpId;
+
+              return (
+                <div 
+                  key={exp.id} 
+                  id={`exp-card-${exp.id}`}
+                  className={`group bg-white rounded-2xl p-6 transition-all duration-500 flex flex-col relative overflow-hidden cursor-default
+                    ${isHighlighted 
+                      ? 'ring-4 ring-blue-500 ring-offset-2 shadow-[0_0_25px_rgba(59,130,246,0.6)] scale-[1.02] z-10 border-transparent' 
+                      : 'shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-2 hover:border-blue-300'}
+                  `}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  
+                  <div className="flex justify-between items-start mb-4 relative z-10">
+                    <div className="bg-blue-50 p-3.5 rounded-xl w-fit transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-blue-100 group-hover:shadow-md">
+                      <Flask className="text-blue-600" size={24} />
+                    </div>
+                    <div>
+                      {status === 'completed' && <span className="text-[11px] font-bold px-2.5 py-1.5 bg-green-100 text-green-700 rounded-lg shadow-sm border border-green-200">COMPLETED ✓</span>}
+                      {status === 'in_progress' && <span className="text-[11px] font-bold px-2.5 py-1.5 bg-amber-100 text-amber-700 rounded-lg shadow-sm border border-amber-200">IN PROGRESS</span>}
+                      {status === 'not_started' && <span className="text-[11px] font-bold px-2.5 py-1.5 bg-gray-100 text-gray-500 rounded-lg border border-gray-200">NOT STARTED</span>}
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 flex-1">
+                    <h3 className="text-xl font-bold text-gray-800 leading-tight group-hover:text-blue-900 transition-colors">{exp.title}</h3>
+                    <p className="text-sm font-medium text-blue-600/80 mt-1">{exp.category}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-6 mb-5 relative z-10">
+                    <div className="flex gap-2">
+                      <span className={`text-[11px] font-bold px-3 py-1.5 rounded-md border shadow-sm ${getDifficultyColor(exp.difficulty)}`}>
+                        {exp.difficulty?.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex gap-3 relative z-10">
+                    {status !== 'completed' && (
+                      <button onClick={() => handleStart(exp)} className="flex-1 bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
+                        {status === 'in_progress' ? 'Continue Protocol' : 'Start Experiment'}
+                      </button>
+                    )}
+                    {status === 'completed' && (
+                      <button onClick={() => handleStart(exp)} className="flex-1 bg-indigo-50 text-indigo-700 font-bold py-2.5 rounded-xl text-sm hover:bg-indigo-100 border border-indigo-200 transition-all duration-300 shadow-sm flex items-center justify-center gap-2">
+                        Review Simulation
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {processedExperiments.map(exp => {
-            const status = getStatus(exp.id);
-            const isHighlighted = exp.id === highlightExpId;
-
-            return (
-              <div 
-                key={exp.id} 
-                id={`exp-card-${exp.id}`}
-                className={`group bg-white rounded-2xl p-6 transition-all duration-500 flex flex-col relative overflow-hidden cursor-default
-                  ${isHighlighted 
-                    ? 'ring-4 ring-blue-500 ring-offset-2 shadow-[0_0_25px_rgba(59,130,246,0.6)] scale-[1.02] z-10 border-transparent' 
-                    : 'shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-2 hover:border-blue-300'}
-                `}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <div className="bg-blue-50 p-3.5 rounded-xl w-fit transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-blue-100 group-hover:shadow-md">
-                    <Flask className="text-blue-600" size={24} />
-                  </div>
-                  <div>
-                    {status === 'completed' && <span className="text-[11px] font-bold px-2.5 py-1.5 bg-green-100 text-green-700 rounded-lg shadow-sm border border-green-200">COMPLETED ✓</span>}
-                    {status === 'in_progress' && <span className="text-[11px] font-bold px-2.5 py-1.5 bg-amber-100 text-amber-700 rounded-lg shadow-sm border border-amber-200">IN PROGRESS</span>}
-                    {status === 'not_started' && <span className="text-[11px] font-bold px-2.5 py-1.5 bg-gray-100 text-gray-500 rounded-lg border border-gray-200">NOT STARTED</span>}
-                  </div>
-                </div>
-
-                <div className="relative z-10 flex-1">
-                  <h3 className="text-xl font-bold text-gray-800 leading-tight group-hover:text-blue-900 transition-colors">{exp.title}</h3>
-                  <p className="text-sm font-medium text-blue-600/80 mt-1">{exp.category}</p>
-                </div>
-
-                <div className="flex items-center justify-between mt-6 mb-5 relative z-10">
-                  <div className="flex gap-2">
-                    <span className={`text-[11px] font-bold px-3 py-1.5 rounded-md border shadow-sm ${getDifficultyColor(exp.difficulty)}`}>
-                      {exp.difficulty?.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-auto flex gap-3 relative z-10">
-                  {status !== 'completed' && (
-                    <button onClick={() => handleStart(exp)} className="flex-1 bg-blue-600 text-white font-semibold py-2.5 rounded-xl text-sm hover:bg-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                      {status === 'in_progress' ? 'Continue Protocol' : 'Start Experiment'}
-                    </button>
-                  )}
-                  {status === 'completed' && (
-                    <button onClick={() => handleStart(exp)} className="flex-1 bg-indigo-50 text-indigo-700 font-bold py-2.5 rounded-xl text-sm hover:bg-indigo-100 border border-indigo-200 transition-all duration-300 shadow-sm flex items-center justify-center gap-2">
-                      Review Simulation
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
 
         {/* ─── CUSTOM SUCCESS MODAL ─── */}
         {successMessage && (

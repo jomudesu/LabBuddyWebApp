@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   PlayCircle, 
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { useExperiments } from '../../backend/Firebase/useExperiments';
+import { useAuth } from '../../backend/Firebase/AuthContext';
 
 const QuickLinks = () => {
   const navigate = useNavigate();
@@ -24,20 +25,29 @@ const QuickLinks = () => {
 
   const [activeModal, setActiveModal] = useState(null);
   const [randomExperiments, setRandomExperiments] = useState([]);
+  const { currentUser } = useAuth();
   const { experiments, loading } = useExperiments();
+
+  const assignedExperiments = useMemo(() => {
+    if (!experiments || !currentUser?.section) return [];
+    return experiments.filter(exp => {
+      const assignedTo = exp.assigned_sections || [];
+      return assignedTo.includes(currentUser.section);
+    });
+  }, [experiments, currentUser]);
   
   const [infoMessage, setInfoMessage] = useState('');
 
   useEffect(() => {
-    if (activeModal === 'beginExperiment' && experiments.length > 0 && !loading) {
-      const shuffled = [...experiments];
+    if (activeModal === 'beginExperiment' && assignedExperiments.length > 0 && !loading) {
+      const shuffled = [...assignedExperiments];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
       setRandomExperiments(shuffled.slice(0, 3));
     }
-  }, [activeModal, experiments, loading]);
+  }, [activeModal, assignedExperiments, loading]);
 
   const getDifficultyStyles = (difficulty) => {
     switch(difficulty?.toLowerCase()) {
@@ -61,7 +71,10 @@ const QuickLinks = () => {
           {loading ? (
             <div className="text-center py-4">Loading Experiments...</div>
           ) : randomExperiments.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">No experiments available.</div>
+            <div className="text-center py-6 text-gray-500">
+              <p className="font-semibold text-gray-700">No experiments assigned yet.</p>
+              <p className="text-sm mt-1">Your instructor hasn't posted any experiments for your section.</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {randomExperiments.map((exp) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { BarChart3, Search, Filter, LayoutGrid, CheckCircle2, Minus, TrendingUp, Award, AlertCircle, FlaskConical, Mail, X, RotateCcw } from 'lucide-react';
+import { BarChart3, Search, Filter, LayoutGrid, CheckCircle2, Minus, TrendingUp, Award, AlertCircle, FlaskConical, Mail, X, RotateCcw, AlertTriangle, ClipboardList } from 'lucide-react';
 import { supabase } from '../../backend/Firebase/firebase';
 import { useAuth } from '../../backend/Firebase/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -30,7 +30,11 @@ const InstructorAnalytics = () => {
   const [sectionFilter, setSectionFilter] = useState('All');
 
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [selectedStudentForReset, setSelectedStudentForReset] = useState(null);
+  const [selectedStudentForReport, setSelectedStudentForReport] = useState(null);
   const [resetting, setResetting] = useState(false);
+  
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const instructorSections = useMemo(() => currentUser?.handledSections || [], [currentUser]);
 
@@ -67,12 +71,12 @@ const InstructorAnalytics = () => {
 
     fetchData();
 
-    const channel = supabase.channel('instructor_analytics')
+    const channel = supabase.channel(`instructor_analytics_${Math.random().toString(36).substring(2, 10)}`)
       .on('postgres_changes', { event: '*', schema: 'public' }, () => fetchData())
       .subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, [instructorSections]);
+  }, [instructorSections, refreshTrigger]);
 
   const gradebook = useMemo(() => {
     let filteredStudents = students.filter(student => {
@@ -117,9 +121,35 @@ const InstructorAnalytics = () => {
           user_id: selectedRecord.student.id, 
           experiment_id: selectedRecord.exp.id 
         });
+      
+      setProgress(prev => prev.filter(p => !(p.userId === selectedRecord.student.id && p.experimentId === selectedRecord.exp.id)));
+      
       setSelectedRecord(null);
+      setRefreshTrigger(prev => prev + 1); // Force a background sync
     } catch (error) {
       console.error("Error resetting progress:", error);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleResetAllProgress = async () => {
+    if (!selectedStudentForReset) return;
+    setResetting(true);
+    try {
+      await supabase
+        .from('user_progress')
+        .delete()
+        .match({ 
+          user_id: selectedStudentForReset.id 
+        });
+      
+      setProgress(prev => prev.filter(p => p.userId !== selectedStudentForReset.id));
+      
+      setSelectedStudentForReset(null);
+      setRefreshTrigger(prev => prev + 1); // Force a background sync
+    } catch (error) {
+      console.error("Error resetting all progress:", error);
     } finally {
       setResetting(false);
     }
@@ -133,7 +163,85 @@ const InstructorAnalytics = () => {
     <div className="p-8 max-w-7xl mx-auto w-full flex flex-col h-full animate-fade-in relative">
       <style>{`.table-scrollbar::-webkit-scrollbar { height: 8px; } .table-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }`}</style>
 
-      {/* Reconsideration Reset Modal */}
+      {/* STUDENT REPORT CARD MODAL */}
+      {selectedStudentForReport && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[85vh]">
+            
+            <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
+                  {(selectedStudentForReport.displayName || 'S').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800 leading-tight tracking-tight">{selectedStudentForReport.displayName}</h2>
+                  <div className="flex items-center gap-2 mt-1.5">
+                     <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm uppercase tracking-wider">{selectedStudentForReport.section}</span>
+                     <span className="text-[11px] font-medium text-slate-400 flex items-center"><Mail size={12} className="mr-1"/> {selectedStudentForReport.email}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedStudentForReport(null)} className="text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-lg p-1.5 transition-colors shadow-sm hover:shadow"><X size={20} /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><ClipboardList size={16} /> Module Grade Breakdown</h3>
+              <div className="space-y-3">
+                {experiments.map(exp => {
+                  const details = selectedStudentForReport.completions[exp.id];
+                  return (
+                    <div key={exp.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-lg ${details?.completed ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                          <FlaskConical size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800 text-sm leading-tight">{exp.title}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">{exp.category}</p>
+                        </div>
+                      </div>
+
+                      {details?.completed ? (
+                        <div className="flex items-center gap-6">
+                          <div className="text-center">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Misclicks</p>
+                            <p className="text-sm font-bold text-amber-500">{details.errors}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Score</p>
+                            <p className="text-sm font-bold text-slate-700">{details.grade}%</p>
+                          </div>
+                          <div className="text-center w-16 bg-emerald-50 border border-emerald-100 rounded-lg py-1">
+                            <p className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider mb-0.5">Grade</p>
+                            <p className={`text-lg font-black leading-none ${details.grade >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {getEaristGrade(details.grade)}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center px-4 py-2 bg-slate-50 border border-slate-100 rounded-lg">
+                          <Minus size={14} className="text-slate-400 mr-1.5" />
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="p-5 border-t border-slate-100 bg-white flex justify-between items-center shrink-0">
+               <div>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Completion Progress</p>
+                 <p className="text-xl font-black text-blue-600">{selectedStudentForReport.progressPercentage}% <span className="text-sm font-semibold text-slate-400 ml-1">({selectedStudentForReport.completedCount}/{experiments.length} Modules)</span></p>
+               </div>
+               <button onClick={() => setSelectedStudentForReport(null)} className="px-6 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-colors shadow-md">Close Report</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SINGLE MODULE RESET MODAL */}
       {selectedRecord && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
@@ -177,6 +285,45 @@ const InstructorAnalytics = () => {
         </div>
       )}
 
+      {/* FULL RESET MODAL */}
+      {selectedStudentForReset && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
+            <div className="p-5 border-b border-slate-100 bg-rose-50 flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-black text-rose-800 leading-tight pr-4 flex items-center gap-2"><AlertTriangle size={18} /> Global Reset</h3>
+                <p className="text-xs font-bold text-rose-600 mt-1 uppercase tracking-wider">{selectedStudentForReset.displayName}</p>
+              </div>
+              <button onClick={() => setSelectedStudentForReset(null)} className="text-rose-400 hover:text-rose-600 bg-white border border-rose-200 rounded-lg p-1.5 transition-colors"><X size={16} /></button>
+            </div>
+            
+            <div className="p-6 text-center">
+               <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-200 text-rose-600">
+                  <RotateCcw size={32} />
+               </div>
+               <h4 className="text-lg font-bold text-slate-800 mb-2">Wipe All Progress?</h4>
+               <p className="text-sm text-slate-500 mb-6 leading-relaxed">You are about to permanently delete <strong>{selectedStudentForReset.completedCount} completed modules</strong> for this student. This action cannot be undone.</p>
+               
+               <div className="flex gap-3">
+                 <button 
+                   onClick={() => setSelectedStudentForReset(null)}
+                   className="flex-1 bg-slate-100 text-slate-600 font-bold py-2.5 rounded-lg hover:bg-slate-200 border border-slate-200 transition-all"
+                 >
+                   Cancel
+                 </button>
+                 <button 
+                   onClick={handleResetAllProgress}
+                   disabled={resetting}
+                   className="flex-1 bg-rose-600 text-white font-bold py-2.5 rounded-lg hover:bg-rose-700 shadow-sm transition-all disabled:opacity-50"
+                 >
+                   {resetting ? 'Wiping...' : 'Confirm Wipe'}
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div><h1 className="text-3xl font-extrabold text-slate-800 flex items-center"><BarChart3 className="mr-3 text-purple-600" size={32} /> Grades & Analytics</h1><p className="text-slate-500 mt-1">Track comprehensive class progress across all published modules.</p></div>
         <div className="flex gap-4">
@@ -194,7 +341,7 @@ const InstructorAnalytics = () => {
             <thead className="sticky top-0 z-20 bg-slate-100/90 backdrop-blur-md shadow-sm border-b border-slate-200">
               <tr>
                 <th className="sticky left-0 z-30 bg-slate-100/95 backdrop-blur-md px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 min-w-[300px]">Student Roster</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center border-r border-slate-200 bg-slate-100/90">Overall Progress</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center border-r border-slate-200 bg-slate-100/90 min-w-[260px]">Overall Progress</th>
                 {experiments.map(exp => <th key={exp.id} className="px-6 py-4 text-center border-r border-slate-200 bg-slate-100/90 max-w-[160px] truncate" title={exp.title}><div className="flex flex-col items-center"><div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs"><FlaskConical size={12} className="text-purple-500 shrink-0" /><span className="truncate">{exp.title}</span></div><span className="text-[9px] font-extrabold text-slate-400 mt-1 tracking-widest uppercase">Module</span></div></th>)}
               </tr>
             </thead>
@@ -202,22 +349,60 @@ const InstructorAnalytics = () => {
               {gradebook.length > 0 ? gradebook.map((student) => (
                 <tr key={student.id} className="hover:bg-purple-50/20 group">
                   <td className="sticky left-0 z-10 bg-white group-hover:bg-purple-50/50 px-6 py-3.5 border-r border-slate-200 shadow-[4px_0_12px_rgba(0,0,0,0.02)]"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">{(student.displayName || 'S').charAt(0).toUpperCase()}</div><div className="flex flex-col"><span className="font-bold text-slate-800 text-sm leading-tight">{student.displayName}</span><span className="text-[10px] text-slate-500 flex items-center mt-0.5"><Mail size={10} className="mr-1 opacity-70" /> {student.email}</span></div></div><span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-600 rounded-md border border-slate-200 ml-4">{student.section}</span></div></td>
-                  <td className="px-6 py-3.5 border-r border-slate-200 bg-slate-50/30"><div className="flex items-center gap-3 justify-center"><div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden"><div className={`h-full rounded-full ${student.progressPercentage === 100 ? 'bg-emerald-500' : 'bg-purple-500'}`} style={{ width: `${student.progressPercentage}%` }}/></div><span className={`text-xs font-black w-8 text-right ${student.progressPercentage === 100 ? 'text-emerald-600' : 'text-slate-700'}`}>{student.progressPercentage}%</span></div></td>
+                  
+                  <td className="px-6 py-3.5 border-r border-slate-200 bg-slate-50/30">
+                    <div className="flex items-center justify-between max-w-[200px] mx-auto gap-4">
+                      
+                      <div className="flex items-center gap-2 flex-1" title={`${student.completedCount} out of ${experiments.length} modules completed`}>
+                        <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                           <div className={`h-full rounded-full ${student.progressPercentage === 100 ? 'bg-emerald-500' : 'bg-purple-500'}`} style={{ width: `${student.progressPercentage}%` }}/>
+                        </div>
+                        <span className={`text-xs font-black w-8 text-right shrink-0 ${student.progressPercentage === 100 ? 'text-emerald-600' : 'text-slate-700'}`}>
+                           {student.progressPercentage}%
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button 
+                          onClick={() => setSelectedStudentForReport(student)}
+                          className="p-1.5 text-blue-500 hover:text-white hover:bg-blue-500 rounded-lg transition-colors border border-blue-200 hover:border-blue-500 bg-white shadow-sm"
+                          title="View Full Student Report Card"
+                        >
+                          <ClipboardList size={14} />
+                        </button>
+                        
+                        {student.completedCount > 0 ? (
+                          <button 
+                            onClick={() => setSelectedStudentForReset(student)}
+                            className="p-1.5 text-slate-400 hover:text-white hover:bg-rose-500 rounded-lg transition-colors border border-transparent hover:border-rose-500"
+                            title="Reset ALL module progress for this student"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                        ) : (
+                          <div className="w-[28px]" />
+                        )}
+                      </div>
+
+                    </div>
+                  </td>
+
                   {experiments.map(exp => (
-                    <td key={exp.id} className="px-6 py-3.5 border-r border-slate-100 text-center">
+                    <td key={exp.id} className="px-4 py-3.5 border-r border-slate-100 text-center">
                       <div className="flex justify-center items-center h-full">
-                        {/* Interactive Completion Pill with Reset Modal */}
                         {student.completions[exp.id]?.completed ? (
                           <button 
                             onClick={() => setSelectedRecord({ student, exp, details: student.completions[exp.id] })} 
-                            className="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center border border-emerald-200 hover:bg-emerald-200 hover:scale-110 transition-all cursor-pointer" 
+                            className="group relative flex items-center justify-center px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200 shadow-sm hover:bg-emerald-500 hover:text-white hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer" 
                             title="View Details & Reset"
                           >
-                            <CheckCircle2 size={16} strokeWidth={2.5} />
+                            <CheckCircle2 size={16} strokeWidth={2.5} className="mr-1.5" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Done</span>
                           </button>
                         ) : (
-                          <div className="w-7 h-7 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center border border-slate-200" title="Not Started">
-                            <Minus size={16} strokeWidth={2.5} />
+                          <div className="flex items-center justify-center px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg border border-slate-200" title="Not Started">
+                            <Minus size={16} strokeWidth={2.5} className="mr-1.5" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Pending</span>
                           </div>
                         )}
                       </div>

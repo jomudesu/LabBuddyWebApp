@@ -34,8 +34,10 @@ export const useExperiments = () => {
     // 1. Initial fetch when the component loads
     fetchExperiments();
 
-    // 2. Listen for any changes to the 'experiments' table
-    const channel = supabase.channel('global_experiments_sync')
+    // 2. Use Math.random() to create a TRULY unique channel string (e.g., 'sync_a1b2c3d4').
+    const uniqueChannelName = `global_experiments_sync_${Math.random().toString(36).substring(2, 15)}`;
+    
+    const channel = supabase.channel(uniqueChannelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'experiments' }, () => {
         // Whenever an instructor toggles an assignment, this triggers and silently refetches the updated list!
         fetchExperiments(); 
@@ -43,7 +45,9 @@ export const useExperiments = () => {
       .subscribe();
 
     // 3. Cleanup the listener when the user leaves the page
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return { experiments, loading, error };

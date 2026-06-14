@@ -60,15 +60,19 @@ const Sidebar = () => {
       <div className="p-5 border-t border-gray-100 bg-white">
         <div className="flex items-center mb-4 group cursor-default">
           <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center text-white font-bold shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-0.5 group-hover:scale-105">
-            {currentUser?.email?.charAt(0).toUpperCase() || 'U'}
+            {currentUser?.display_name?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="ml-3 overflow-hidden">
             <p className="text-sm font-bold text-gray-800 truncate transition-colors duration-300 group-hover:text-blue-700">
-              {currentUser?.email?.split('@')[0] || 'User'}
+              {currentUser?.display_name || 'User'}
             </p>
-            {/* ✨ FIX: Dynamic Role Display */}
             <p className="text-xs text-gray-500 font-medium mt-0.5 capitalize">
               {currentUser?.role?.replace('_', ' ') || 'Student'}
+              {currentUser?.section && (
+                <span className="ml-1.5 text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                  {currentUser.section}
+                </span>
+              )}
             </p>
           </div>
         </div>

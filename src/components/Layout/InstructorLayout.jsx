@@ -4,7 +4,8 @@ import {
   LayoutDashboard, 
   Users, 
   FlaskConical, 
-  BarChart3, 
+  BarChart3,
+  Printer, 
   LogOut, 
   ShieldCheck 
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const InstructorLayout = ({ children }) => {
     { path: '/instructor/students', icon: Users, label: 'My Students' },
     { path: '/instructor/experiments', icon: FlaskConical, label: 'Experiment Tracking' },
     { path: '/instructor/analytics', icon: BarChart3, label: 'Grades & Analytics' },
+    { path: '/instructor/reports', icon: Printer, label: 'Reports & Printing' },
   ];
 
   const handleLogout = async () => {

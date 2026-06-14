@@ -33,6 +33,7 @@ import InstructorDashboard from './Pages/Instructor/InstructorDashboard';
 import InstructorStudents from './Pages/Instructor/InstructorStudents';
 import InstructorExperiments from './Pages/Instructor/InstructorExperiments';
 import InstructorAnalytics from './Pages/Instructor/InstructorAnalytics';
+import InstructorReports from './Pages/Instructor/InstructorReports';
 
 // ─── ROUTE PROTECTORS ───
 
@@ -126,6 +127,7 @@ function AppRoutes() {
       <Route path="/instructor/students" element={<InstructorRoute><InstructorLayout><InstructorStudents /></InstructorLayout></InstructorRoute>} />
       <Route path="/instructor/experiments" element={<InstructorRoute><InstructorLayout><InstructorExperiments /></InstructorLayout></InstructorRoute>} />
       <Route path="/instructor/analytics" element={<InstructorRoute><InstructorLayout><InstructorAnalytics /></InstructorLayout></InstructorRoute>} />
+      <Route path="/instructor/reports" element={<InstructorRoute><InstructorLayout><InstructorReports /></InstructorLayout></InstructorRoute>} />
     </Routes>
   );
 }
