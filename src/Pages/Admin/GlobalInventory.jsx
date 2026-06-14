@@ -226,6 +226,7 @@ const GlobalInventory = () => {
                 <option value="Glassware">Glassware</option>
                 <option value="Equipment">Equipment</option>
                 <option value="Safety">Safety Gear</option>
+                <option value="Material">Material</option>
               </select>
             </div>
             <div>
