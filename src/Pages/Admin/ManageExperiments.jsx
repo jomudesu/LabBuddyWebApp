@@ -147,7 +147,7 @@ const ManageExperiments = () => {
       {/* ─── HEADER ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div><h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Experiment CMS</h1><p className="text-sm text-slate-400 mt-1 font-medium">Create, edit, and publish virtual laboratory modules.</p></div>
-        <button onClick={openCreateModal} className="flex items-center px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/20 transition-all"><Plus size={18} className="mr-2" /> Add Experiment</button>
+        <button onClick={openCreateModal} className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/20 transition-all"><Plus size={18} className="mr-2" /> Add Experiment</button>
       </div>
 
       {/* ─── SEARCH & FILTER TOGGLE ROW ─── */}

@@ -211,6 +211,7 @@ const ManageAccounts = () => {
   // Dark Mode Badges
   const getRoleBadge = (role) => {
     switch (role?.toLowerCase()) {
+      case 'super_admin': return <span className="flex items-center text-[10px] font-bold px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded-md uppercase tracking-wider"><Shield size={12} className="mr-1"/> Super Admin</span>;
       case 'instructor': return <span className="flex items-center text-[10px] font-bold px-2 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-md uppercase tracking-wider"><GraduationCap size={12} className="mr-1"/> Instructor</span>;
       case 'admin': return <span className="flex items-center text-[10px] font-bold px-2 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-md uppercase tracking-wider"><Shield size={12} className="mr-1"/> Admin</span>;
       default: return <span className="flex items-center text-[10px] font-bold px-2 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-md uppercase tracking-wider"><User size={12} className="mr-1"/> Student</span>;
@@ -237,7 +238,7 @@ const ManageAccounts = () => {
             <form onSubmit={handleCreateAccount} className="p-6 overflow-y-auto max-h-[75vh] space-y-5 form-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Display Name</label><input required type="text" value={formData.displayName} onChange={(e) => setFormData({...formData, displayName: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 outline-none focus:border-blue-500" /></div>
-                <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label><select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 outline-none focus:border-blue-500"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></div>
+                <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label><select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 outline-none focus:border-blue-500"><option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option>{currentUser?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}</select></div>
               </div>
 
               <div><label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label><input required type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 outline-none focus:border-blue-500" /></div>
@@ -294,7 +295,7 @@ const ManageAccounts = () => {
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Role</label>
                   <select disabled={editingUser.id === currentUser?.id} value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-200 outline-none focus:border-blue-500 disabled:opacity-50">
-                    <option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option>
+                    <option value="student">Student</option><option value="instructor">Instructor</option><option value="admin">Admin</option>{currentUser?.role === 'super_admin' && <option value="super_admin">Super Admin</option>}
                   </select>
                 </div>
               </div>
@@ -370,7 +371,7 @@ const ManageAccounts = () => {
           </h1>
           <p className="text-sm text-slate-400 mt-1 font-medium">Manage student and instructor accounts.</p>
         </div>
-        <button onClick={openCreateModal} className="flex items-center px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/20 transition-all">
+        <button onClick={openCreateModal} className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-900/20 transition-all">
           <UserPlus size={18} className="mr-2" /> New Account
         </button>
       </div>
@@ -427,6 +428,7 @@ const ManageAccounts = () => {
                 className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer font-medium text-slate-300"
               >
                 <option value="All">All Roles</option>
+                <option value="super_admin">Super Admins</option>
                 <option value="student">Students</option>
                 <option value="instructor">Instructors</option>
                 <option value="admin">Admins</option>
@@ -518,29 +520,33 @@ const ManageAccounts = () => {
                     <div className="flex items-center"><CalendarDays size={14} className="mr-1.5 opacity-70"/> {new Date(user.created_at).toLocaleDateString()}</div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    
-                    {currentUser?.role === 'admin' ? (
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => openEditModal(user)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"><Edit2 size={18} /></button>
-                        
-                        <button 
-                          onClick={() => handleResetDevice(user.id)} 
-                          className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
-                          title="Reset Authorized Devices"
-                        >
-                          <Unlock size={18} />
-                        </button>
+                    {(() => {
+                      const isSuperAdmin = currentUser?.role === 'super_admin';
+                      const isAdmin = currentUser?.role === 'admin';
+                      const isTargetSuperAdmin = user.role === 'super_admin';
+                      // Super Admin: can act on everyone. Admin: blocked from super_admin rows.
+                      const canAct = isSuperAdmin || (isAdmin && !isTargetSuperAdmin);
 
-                        {currentUser?.id !== user.id && (
-                          <button onClick={() => { setUserToDelete(user); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-500 font-bold uppercase tracking-widest flex justify-end items-center opacity-50">
-                        <Lock size={12} className="mr-1.5"/> Restricted
-                      </span>
-                    )}
-
+                      return canAct ? (
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openEditModal(user)} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"><Edit2 size={18} /></button>
+                          <button 
+                            onClick={() => handleResetDevice(user.id)} 
+                            className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                            title="Reset Authorized Devices"
+                          >
+                            <Unlock size={18} />
+                          </button>
+                          {currentUser?.id !== user.id && (
+                            <button onClick={() => { setUserToDelete(user); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500 font-bold uppercase tracking-widest flex justify-end items-center opacity-50">
+                          <Lock size={12} className="mr-1.5"/> Restricted
+                        </span>
+                      );
+                    })()}
                   </td>
                 </tr>
                 )
