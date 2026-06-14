@@ -13,6 +13,8 @@ import OsmosisBench from './benches/OsmosisBench';
 import ChromatographyBench from './benches/ChromatographyBench';
 import PHScaleBench from './benches/PHScaleBench';
 import TitrationCurveBench from './benches/TitrationCurveBench';
+import GasLawsBench from './benches/GasLawsBench';
+import ThermalReactionsBench from './benches/ThermalReactionsBench';
 
 const BenchComponentsMap = {
   TitrationBench: TitrationBench,
@@ -23,6 +25,8 @@ const BenchComponentsMap = {
   ChromatographyBench: ChromatographyBench,
   PHScaleBench: PHScaleBench,
   TitrationCurveBench: TitrationCurveBench,
+  GasLawsBench: GasLawsBench,
+  ThermalReactionsBench: ThermalReactionsBench,
 };
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -331,7 +335,7 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
               <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse shadow-[0_0_8px_rgba(248,113,113,0.8)]" /> Live Telemetry
             </h3>
             <div className="space-y-3">
-              {/* ✨ RESTORED: All 8 Experiment Telemetry Panels */}
+              
               {experimentId === 'acid_base_titration' ? (
                 <>
                   <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2">
@@ -496,9 +500,52 @@ const ClickAndPlaySimulationContent = ({ config, experimentId, onComplete }) => 
                     </span>
                   </div>
                 </>
+              ) : experimentId === 'boyle_s_law_pressure_volume' ? (
+                <>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                    <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Activity size={16} className="text-red-400 flex-shrink-0" /> Pressure</span>
+                    <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.pressure > 1 ? 'text-red-400' : simState.pressure < 1 ? 'text-blue-400' : 'text-green-400'}`}>
+                      {simState.pressure?.toFixed(2)} atm
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                    <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Layers size={16} className="text-cyan-400 flex-shrink-0" /> Volume</span>
+                    <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-cyan-300 font-bold ml-auto shadow-inner">
+                      {simState.volume?.toFixed(1)} mL
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                    <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><FlaskConical size={16} className="text-amber-400 flex-shrink-0" /> Weights</span>
+                    <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-amber-300 font-bold ml-auto shadow-inner">
+                      {simState.weightsOnPiston} / 2
+                    </span>
+                  </div>
+                </>
+              ) : experimentId === 'thermal_reactions' ? (
+                <>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                    <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Thermometer size={16} className="text-red-400 flex-shrink-0" /> Temp A (Exo)</span>
+                    <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.tempA > 25 ? 'text-red-400' : 'text-green-400'}`}>
+                      {simState.tempA?.toFixed(1)} °C
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                    <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Thermometer size={16} className="text-blue-400 flex-shrink-0" /> Temp B (Endo)</span>
+                    <span className={`font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg ml-auto font-bold shadow-inner ${simState.tempB < 25 ? 'text-blue-400' : 'text-green-400'}`}>
+                      {simState.tempB?.toFixed(1)} °C
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 rounded-xl bg-black/25 border border-white/10 cursor-default flex-wrap gap-2 group hover:bg-black/35 transition-all">
+                    <span className="flex items-center gap-2 text-white/90 text-sm font-semibold"><Zap size={16} className="text-yellow-400 flex-shrink-0" /> Active RxN</span>
+                    <span className="font-mono text-sm px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-amber-300 font-bold ml-auto shadow-inner uppercase">
+                      {simState.thermometerPos === 'beaker_a' ? 'Exothermic' : simState.thermometerPos === 'beaker_b' ? 'Endothermic' : 'Idle'}
+                    </span>
+                  </div>
+                </>
               ) : (
                 <div className="p-3 text-center text-slate-400 text-sm italic">Telemetry offline.</div>
               )}
+
             </div>
           </div>
 

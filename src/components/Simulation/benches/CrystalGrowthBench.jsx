@@ -32,6 +32,8 @@ const CrystalGrowthBench = ({
               }`}
               onClick={() => handleElementClick('seed_string')}
             >
+              <span className="absolute -top-10 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-colors duration-300 group-hover:bg-white/20">Seed Crystal</span>
+
               <div className="w-0.5 h-24 bg-gray-300 transition-all duration-300 group-hover:bg-white group-hover:shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
               
               <div 
@@ -81,7 +83,7 @@ const CrystalGrowthBench = ({
           </div>
 
           {/* ── Tools (Solute & Stirrer) ── */}
-          <div className="flex flex-row items-end gap-12 z-10 mb-8">
+          <div className="flex flex-row items-end gap-20 z-10 mb-8">
             
             {/* CuSO4 Powder Jar */}
             <div className="flex flex-col items-center relative z-10 group cursor-pointer" onClick={() => handleElementClick('solute_jar')}>

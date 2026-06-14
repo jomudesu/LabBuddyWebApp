@@ -4,7 +4,7 @@ import {
   Beaker, FlaskRound as Flask, Atom, Shield, ChevronRight, 
   ChevronDown, ChevronUp, BookOpen, AlertCircle, Sparkles,
   Microscope, TestTube, Brain, Wrench, ArrowLeft, ShieldCheck, Check,
-  CheckCircle, ShieldAlert, KeyRound, Mail
+  CheckCircle, ShieldAlert, KeyRound, Mail, Eye, EyeOff
 } from 'lucide-react';
 import { useAuth } from '../backend/Firebase/AuthContext';
 import { supabase } from '../backend/Firebase/firebase';
@@ -28,6 +28,7 @@ const Landing = () => {
   
   const [showDPAModal, setShowDPAModal] = useState(false);
   const [pendingUser, setPendingUser] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // OTP MFA STATES
   const [showOTP, setShowOTP] = useState(false);
@@ -139,7 +140,7 @@ const routeUser = (role) => {
         }
         
         setShowOTP(true);
-        setSuccessMessage(`Unrecognized device detected. A security code has been sent to ${email}.`);
+        setSuccessMessage(`Unrecognized device detected. A security code has been sent to ${email}. Check your spams too!`);
       } else {
         // Exclude both admins from DPA check
         if (!userData.has_accepted_dpa && !['admin', 'super_admin'].includes(userData.role)) {
@@ -419,7 +420,17 @@ const routeUser = (role) => {
                   </div>
                   <div className="mb-5">
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Password</label>
-                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium text-slate-700" placeholder="••••••••" />                  
+                    <div className="relative">
+                      <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3.5 pr-12 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium text-slate-700" placeholder="••••••••" />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600 transition-colors focus:outline-none"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                     <div className="flex justify-start mt-2">
                       <button type="button" onClick={() => { setIsForgotPassword(true); resetMessages(); }} className="text-xs font-bold text-blue-600 hover:text-blue-500 transition-colors focus:outline-none">
                         Forgot password?

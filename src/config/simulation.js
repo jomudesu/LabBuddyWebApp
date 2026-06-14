@@ -7,11 +7,11 @@ export const simulationConfigs = {
     
     introduction: "Welcome to the Acid-Base Titration experiment. In this module, you will determine the unknown concentration of a solution by carefully adding a titrant (NaOH) until the neutralization point is reached. Pay close attention to the pH telemetry and the color of your indicator.",
     
-    equipment: ["0.1M NaOH Solution", "Burette 50mL", "Beaker 250mL", "pH Meter", "Indicator (Phenolphthalein)"],
+    equipment: ["0.1M NaOH Solution", "Burette 60mL", "Beaker 250mL", "pH Meter", "Indicator (Phenolphthalein)"],
     
     equipmentDetails: {
       "0.1M NaOH Solution": "A strong base of known concentration used as the titrant to neutralize the acidic analyte.",
-      "Burette 50mL": "A graduated glass tube with a tap at one end, used for delivering highly accurate volumes of a liquid.",
+      "Burette 60mL": "A graduated glass tube with a tap at one end, used for delivering highly accurate volumes of a liquid.",
       "Beaker 250mL": "A cylindrical glass container for holding, mixing, and heating liquids.",
       "pH Meter": "An electronic telemetry device used to accurately measure the acidity or alkalinity of the solution in real-time.",
       "Indicator (Phenolphthalein)": "A chemical compound that remains colorless in acidic solutions and turns pink in basic solutions."
@@ -37,7 +37,7 @@ export const simulationConfigs = {
         id: 'fill_burette',
         targetElement: 'naoh_bottle',
         animation: 'fill',
-        instruction: 'Click the 0.1M NaOH bottle to fill the burette.',
+        instruction: 'Fill the burette with the 0.1M NaOH bottle.',
         repeatable: false,
         explanation: "Filling the burette with a known concentration of Sodium Hydroxide (NaOH) prepares the system. This allows us to measure exactly how much base is needed to neutralize the acid."
       },
@@ -45,7 +45,7 @@ export const simulationConfigs = {
         id: 'add_indicator',
         targetElement: 'indicator',
         animation: 'drop',
-        instruction: 'Click the indicator bottle to add 2–3 drops of phenolphthalein.',
+        instruction: 'Use the indicator bottle to add a drop of phenolphthalein.',
         repeatable: false,
         explanation: "Phenolphthalein is added as a visual marker. Because acid and base solutions are mostly clear, the indicator will turn pink the moment the solution crosses into a basic pH, visually signaling the endpoint."
       },
@@ -53,7 +53,7 @@ export const simulationConfigs = {
         id: 'add_base',
         targetElement: 'burette',
         animation: 'pour',
-        instruction: 'Click the burette to add NaOH drop by drop until the colour changes to pink.',
+        instruction: 'Use the burette to add NaOH drop by drop until the colour changes to pink.',
         repeatable: true,
         explanation: "As the NaOH drops into the HCl, a neutralization reaction occurs forming water and salt (NaCl). The pH slowly rises. Watch the curve closely as it approaches the equivalence point."
       },
@@ -61,7 +61,7 @@ export const simulationConfigs = {
         id: 'record_volume',
         targetElement: 'burette',
         animation: 'none',
-        instruction: 'Click the burette scale to record the final volume reading.',
+        instruction: 'Measure the burette scale to record the final volume reading.',
         repeatable: false,
         explanation: "The solution has turned pink, meaning excess base is now present. Recording this exact volume allows us to calculate the unknown concentration of the original acid."
       },
@@ -80,7 +80,7 @@ export const simulationConfigs = {
       }
       pH = Math.min(Math.max(pH, 0), 14);
       const indicatorColor = pH >= indicator.transitionpH ? indicator.colorAbove : indicator.colorBelow;
-      const buretteFill = Math.max(0, 80 - (addedVolume / totalNeeded) * 80);
+      const buretteFill = Math.max(0, 80 - (addedVolume / (totalNeeded * 1.5)) * 80);
       const beakerFill = Math.min(68, 40 + (addedVolume / totalNeeded) * 28);
       const isComplete = indicatorColor === indicator.colorAbove;
 
@@ -88,7 +88,7 @@ export const simulationConfigs = {
     },
   },
 
-  flame_test: {
+flame_test: {
     id: 'flame_test',
     title: 'Flame Test Analysis',
     benchComponent: 'FlameTestBench',
@@ -116,27 +116,41 @@ export const simulationConfigs = {
       },
       { 
         id: 'step_2', 
+        instruction: 'Pick up the Nichrome Wire from the stand.', 
+        targetElement: 'nichrome_wire', 
+        animation: 'pickup',
+        explanation: "The nichrome wire is the perfect tool for flame tests because it has a high melting point and does not produce its own color in the flame."
+      },
+      { 
+        id: 'step_3', 
         instruction: 'Dip the nichrome wire into the Copper (Cu) sample.', 
         targetElement: 'sample_cu', 
         animation: 'dip',
         explanation: "By dipping the nichrome wire into the solution, we collect a small amount of Copper ions (Cu²⁺) on the loop, ready for thermal excitation."
       },
       { 
-        id: 'step_3', 
+        id: 'step_4', 
         instruction: 'Place the coated wire into the flame and observe the color.', 
         targetElement: 'flame', 
         animation: 'burn_cu',
         explanation: "The thermal energy excites the copper electrons to a higher orbital. As they immediately fall back down, they release a photon corresponding to a green wavelength of light."
       },
       { 
-        id: 'step_4', 
-        instruction: 'Clean the wire and dip it into the Strontium (Sr) sample.', 
-        targetElement: 'sample_sr', 
-        animation: 'dip',
+        id: 'step_5', 
+        instruction: 'Clean the wire to prepare it for the next sample.', 
+        targetElement: 'nichrome_wire', 
+        animation: 'clean',
         explanation: "Before testing a new sample, the wire must be thoroughly cleaned (often in hydrochloric acid) so the previous copper emission does not contaminate our next observation."
       },
       { 
-        id: 'step_5', 
+        id: 'step_6', 
+        instruction: 'Dip the clean wire into the Strontium (Sr) sample.', 
+        targetElement: 'sample_sr', 
+        animation: 'dip',
+        explanation: "We collect Strontium ions (Sr²⁺) on the clean loop. Since there is no copper residue, we will see the true emission spectrum of Strontium."
+      },
+      { 
+        id: 'step_7', 
         instruction: 'Place the wire into the flame and observe the color.', 
         targetElement: 'flame', 
         animation: 'burn_sr',
@@ -149,9 +163,9 @@ export const simulationConfigs = {
     computeState: (actionState) => {
       return {
         isBurnerOn: actionState >= 1,
-        activeSample: (actionState === 2 || actionState === 3) ? 'Copper (Cu)' : (actionState === 4 || actionState === 5) ? 'Strontium (Sr)' : null,
-        flameColor: actionState === 3 ? 'green' : actionState === 5 ? 'red' : actionState >= 1 ? 'blue' : 'none',
-        isComplete: actionState >= 5
+        activeSample: (actionState >= 3 && actionState < 5) ? 'Copper (Cu)' : (actionState >= 6) ? 'Strontium (Sr)' : null,
+        flameColor: actionState === 4 ? 'green' : actionState === 7 ? 'red' : actionState >= 1 ? 'blue' : 'none',
+        isComplete: actionState >= 7
       };
     }
   },
@@ -191,7 +205,7 @@ export const simulationConfigs = {
       },
       { 
         id: 'step_3', 
-        instruction: 'Stir the solution until the powder is fully dissolved.', 
+        instruction: 'Stir the solution using the glass rod until the powder is fully dissolved.', 
         targetElement: 'stirring_rod', 
         animation: 'stir',
         explanation: "Stirring the mixture ensures that the solute is fully dispersed. Because the water is hot, we can dissolve a large amount of powder, creating a highly saturated solution."
@@ -262,7 +276,7 @@ export const simulationConfigs = {
       },
       { 
         id: 'step_3', 
-        instruction: 'Connect the wires from the electrodes to the 9V battery.', 
+        instruction: 'Connect the wires from the 9V battery to the electrodes.', 
         targetElement: 'wires', 
         animation: 'connect',
         explanation: "Connecting the wires establishes a complete circuit. The electrode connected to the negative terminal becomes the cathode (where reduction occurs), and the positive terminal becomes the anode (where oxidation occurs)."
@@ -453,7 +467,7 @@ export const simulationConfigs = {
       },
       { 
         id: 'step_3', 
-        instruction: 'Add Distilled Water to the second strip. Observe the neutral color.', 
+        instruction: 'Add Distilled Water to the second strip. Observe the color change.', 
         targetElement: 'water_drop', 
         animation: 'drop',
         explanation: "Pure distilled water has a perfectly equal concentration of H⁺ and OH⁻ ions. This delicate balance yields a neutral pH reading of exactly 7.0, triggering the green color state of the indicator."
@@ -487,9 +501,7 @@ export const simulationConfigs = {
     title: 'Titration Curves',
     benchComponent: 'TitrationCurveBench',
     difficulty: 'Advanced', 
-    
     introduction: "Welcome to the Titration Curves simulation. In this advanced module, you will perform a strong acid-strong base titration while continuously logging the pH. By plotting pH against the volume of titrant added, you will generate a titration curve and visually identify the precise equivalence point.",
-    
     equipment: ['Burette (0.1M NaOH)', 'Beaker (25mL 0.1M HCl)', 'pH Probe', 'Magnetic Stirrer', 'Data Logger'],
     
     equipmentDetails: {
@@ -555,6 +567,68 @@ export const simulationConfigs = {
         probeLowered: stepCount >= 2,
         curvePhase: curvePhase,
         isComplete: volume >= 50
+      };
+    }
+  },
+
+  boyle_s_law_pressure_volume: {
+    id: 'boyle_s_law_pressure_volume',
+    title: "Boyle's Law: Pressure & Volume",
+    benchComponent: 'GasLawsBench',
+    difficulty: 'Intermediate',
+    introduction: "Explore the inverse relationship between the pressure and volume of a confined gas at a constant temperature. According to Boyle's Law, as volume decreases, pressure increases proportionally.",
+    equipment: ["Sealed Syringe", "Pressure Gauge", "Weights (500g)"],
+    equipmentDetails: {
+      "Sealed Syringe": "A glass cylinder with a movable piston, trapping a fixed amount of gas.",
+      "Pressure Gauge": "A digital sensor that reads the internal pressure of the trapped gas in atmospheres (atm).",
+      "Weights (500g)": "Heavy iron masses used to compress the piston, physically forcing a decrease in gas volume."
+    },
+    steps: [
+      { id: 'step_1', instruction: 'Place the first 500g weight onto the syringe piston.', targetElement: 'weight_1', animation: 'place', explanation: "Adding mass pushes the piston down. The gas molecules are now compressed into half their original volume. With half the space, they collide with the walls twice as often, doubling the pressure." },
+      { id: 'step_2', instruction: 'Place the second 500g weight onto the piston.', targetElement: 'weight_2', animation: 'place', explanation: "Adding more mass compresses the gas even further. As volume halves again, pressure doubles again. This perfect inverse relationship is Boyle's Law: P₁V₁ = P₂V₂." },
+      { id: 'step_3', instruction: 'Remove all weights to let the gas expand back to normal.', targetElement: 'weights_on_piston', animation: 'remove', explanation: "Releasing the downward force allows the high-pressure gas to push the piston back up until the internal pressure equalizes with the normal external atmospheric pressure." },
+      { id: 'step_4', instruction: 'Pull the piston handle UP to actively expand the gas.', targetElement: 'piston_handle', animation: 'pull', explanation: "By forcefully increasing the volume beyond its resting state, the gas molecules have much more room to move. Fewer collisions mean the internal pressure drops below 1 atmosphere." }
+    ],
+    conclusion: "Experiment Complete! You have demonstrated Boyle's Law visually. You proved that decreasing the volume increases the pressure (compression), and increasing the volume decreases the pressure (expansion/vacuum) as long as temperature remains constant.",
+    computeState: (actionState) => {
+      let volume = 50; 
+      let pressure = 1.0; 
+      if (actionState === 1) { volume = 25; pressure = 2.0; }
+      if (actionState === 2) { volume = 12.5; pressure = 4.0; }
+      if (actionState === 3) { volume = 50; pressure = 1.0; }
+      if (actionState >= 4) { volume = 100; pressure = 0.5; }
+      return { volume, pressure, weightsOnPiston: actionState === 1 ? 1 : actionState === 2 ? 2 : 0, pistonPulled: actionState >= 4, isComplete: actionState >= 4 };
+    }
+  },
+
+  thermal_reactions: {
+    id: 'thermal_reactions',
+    title: "Thermal Reactions",
+    benchComponent: 'ThermalReactionsBench',
+    difficulty: 'Beginner',
+    introduction: "Investigate how chemical reactions involve the transfer of heat. You will measure temperature changes to classify reactions as Exothermic (releasing heat into the surroundings) or Endothermic (absorbing heat from the surroundings).",
+    equipment: ["Beakers (Water)", "Thermometer", "Calcium Chloride (CaCl₂)", "Ammonium Nitrate (NH₄NO₃)"],
+    equipmentDetails: {
+      "Beakers (Water)": "Two glass beakers filled with room-temperature distilled water.",
+      "Thermometer": "A digital temperature probe to continuously monitor heat transfer in the solution.",
+      "Calcium Chloride (CaCl₂)": "A solid salt that releases significant thermal energy when its ionic bonds are broken by water.",
+      "Ammonium Nitrate (NH₄NO₃)": "A solid salt that actively absorbs thermal energy from its surroundings when dissolving."
+    },
+    steps: [
+      { id: 'step_1', instruction: 'Place the thermometer into Beaker A (Water).', targetElement: 'thermometer_idle', animation: 'place_a', explanation: "We establish a baseline reading. The distilled water starts at a standard room temperature of 25.0°C." },
+      { id: 'step_2', instruction: 'Add Calcium Chloride (CaCl₂) to Beaker A.', targetElement: 'cacl2_bottle', animation: 'pour', explanation: "As the CaCl₂ dissolves, it releases a massive amount of heat into the water. This is an EXOTHERMIC reaction. Notice the temperature spike!" },
+      { id: 'step_3', instruction: 'Move the thermometer to Beaker B (Water).', targetElement: 'thermometer_a', animation: 'place_b', explanation: "We move the probe to our second baseline beaker, which is completely isolated and still resting at 25.0°C." },
+      { id: 'step_4', instruction: 'Add Ammonium Nitrate (NH₄NO₃) to Beaker B.', targetElement: 'nh4no3_bottle', animation: 'pour', explanation: "As the NH₄NO₃ dissolves, it actively absorbs heat from the surrounding water to break its bonds. This is an ENDOTHERMIC reaction. Notice the temperature plummet, making the beaker freezing cold!" }
+    ],
+    conclusion: "Experiment Complete! You successfully identified both reaction types. Exothermic reactions (like CaCl₂ dissolving) release heat and raise the temperature, while Endothermic reactions (like NH₄NO₃ dissolving) absorb heat and lower the temperature.",
+    computeState: (actionState) => {
+      return {
+        thermometerPos: actionState === 0 ? 'idle' : actionState <= 2 ? 'beaker_a' : 'beaker_b',
+        tempA: actionState >= 2 ? 65.0 : 25.0,
+        tempB: actionState >= 4 ? 5.0 : 25.0,
+        cacl2Added: actionState >= 2,
+        nh4no3Added: actionState >= 4,
+        isComplete: actionState >= 4
       };
     }
   }

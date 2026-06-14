@@ -9,7 +9,7 @@ const PHScaleBench = ({
   setInteractiveData,
   children 
 }) => {
-  const { papersPlaced, lemonTested, waterTested, ammoniaTested, activePH } = simState;
+  const { papersPlaced, lemonTested, waterTested, ammoniaTested, activePH, isComplete } = simState;
   const { animating } = uiState || {};
   
   const target = currentStep?.targetElement;
@@ -75,11 +75,13 @@ const PHScaleBench = ({
             </div>
 
             <div 
-              className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${lemonTested ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]' : ''}`}
+              className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${lemonTested ? 'cursor-pointer hover:-translate-y-1' : ''}`}
               onClick={() => lemonTested && setInteractiveData?.({ activePH: 2.5 })}
             >
+               {/* Dynamic Highlight and Pulse based on completion and selection state */}
                <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] rounded-t-none border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
-                 displayPH === 2.5 ? 'shadow-[0_0_20px_rgba(255,255,255,0.7)] ring-2 ring-white/80' : 'shadow-lg'
+                 displayPH === 2.5 ? 'shadow-[0_0_20px_rgba(255,255,255,0.9)] ring-2 ring-white/90 scale-110' : 
+                 (isComplete ? 'shadow-[0_0_15px_rgba(239,68,68,0.6)] ring-1 ring-red-400/50 animate-pulse' : 'shadow-lg')
                }`}>
                  <div className={`w-14 h-3 rounded-sm shadow-sm transition-all duration-1000 ease-in-out border border-black/10 ${papersPlaced ? 'scale-100 opacity-100' : 'scale-0 opacity-0'} ${lemonTested ? 'bg-red-500' : 'bg-yellow-300'}`} />
                </div>
@@ -104,11 +106,13 @@ const PHScaleBench = ({
             </div>
 
             <div 
-              className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${waterTested ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]' : ''}`}
+              className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${waterTested ? 'cursor-pointer hover:-translate-y-1' : ''}`}
               onClick={() => waterTested && setInteractiveData?.({ activePH: 7 })}
             >
+               {/* Dynamic Highlight and Pulse */}
                <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] rounded-t-none border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
-                 displayPH === 7 ? 'shadow-[0_0_20px_rgba(255,255,255,0.7)] ring-2 ring-white/80' : 'shadow-lg'
+                 displayPH === 7 ? 'shadow-[0_0_20px_rgba(255,255,255,0.9)] ring-2 ring-white/90 scale-110' : 
+                 (isComplete ? 'shadow-[0_0_15px_rgba(34,197,94,0.6)] ring-1 ring-green-400/50 animate-pulse' : 'shadow-lg')
                }`}>
                  <div className={`w-14 h-3 rounded-sm shadow-sm transition-all duration-1000 ease-in-out border border-black/10 ${papersPlaced ? 'scale-100 opacity-100' : 'scale-0 opacity-0'} ${waterTested ? 'bg-green-500' : 'bg-yellow-300'}`} />
                </div>
@@ -133,11 +137,13 @@ const PHScaleBench = ({
             </div>
 
             <div 
-              className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${ammoniaTested ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)]' : ''}`}
+              className={`relative flex flex-col items-center mt-2 transition-transform duration-300 ${ammoniaTested ? 'cursor-pointer hover:-translate-y-1' : ''}`}
               onClick={() => ammoniaTested && setInteractiveData?.({ activePH: 11 })}
             >
+               {/* Dynamic Highlight and Pulse */}
                <div className={`w-20 h-5 bg-white/20 backdrop-blur-md rounded-b-[50%] rounded-t-none border-b-2 border-x border-white/60 flex justify-center items-start pt-1 overflow-hidden z-10 transition-all duration-300 ${
-                 displayPH === 11 ? 'shadow-[0_0_20px_rgba(255,255,255,0.7)] ring-2 ring-white/80' : 'shadow-lg'
+                 displayPH === 11 ? 'shadow-[0_0_20px_rgba(255,255,255,0.9)] ring-2 ring-white/90 scale-110' : 
+                 (isComplete ? 'shadow-[0_0_15px_rgba(99,102,241,0.6)] ring-1 ring-indigo-400/50 animate-pulse' : 'shadow-lg')
                }`}>
                  <div className={`w-14 h-3 rounded-sm shadow-sm transition-all duration-1000 ease-in-out border border-black/10 ${papersPlaced ? 'scale-100 opacity-100' : 'scale-0 opacity-0'} ${ammoniaTested ? 'bg-indigo-700' : 'bg-yellow-300'}`} />
                </div>

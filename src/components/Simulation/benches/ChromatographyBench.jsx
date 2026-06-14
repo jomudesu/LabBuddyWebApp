@@ -114,7 +114,7 @@ const ChromatographyBench = ({
           {/* 5. Watch Glass */}
           <div className="flex flex-col items-center relative z-40 w-36">
             <div 
-              className={`flex flex-col items-center cursor-pointer transition-all duration-700 ease-in-out group z-40 hover:-translate-y-2 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] ${isCovered || (target === 'watch_glass' && animating) ? '-translate-x-[184px] -translate-y-[158px]' : ''}`}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-700 ease-in-out group z-40 hover:-translate-y-2 hover:scale-105 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] ${isCovered || (target === 'watch_glass' && animating) ? '-translate-y-[156px] -translate-x-[184px]' : ''}`}
               onClick={() => handleElementClick('watch_glass')}
             >
               {/* Watch Glass curve shape */}

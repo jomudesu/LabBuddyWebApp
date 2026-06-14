@@ -16,33 +16,38 @@ const FlameTestBench = ({
   let wirePos = 'idle';
   
   if (isComplete) {
-    wirePos = 'flame'; 
+    wirePos = 'idle'; 
   } else if (stepNumber === 1) {
     wirePos = 'idle';
   } else if (stepNumber === 2) {
-    wirePos = (target === 'sample_cu' && animating) ? 'cu' : 'idle';
+    wirePos = (target === 'nichrome_wire' && animating) ? 'ready' : 'idle';
   } else if (stepNumber === 3) {
-    wirePos = (target === 'flame' && animating) ? 'flame' : 'cu';
+    wirePos = (target === 'sample_cu' && animating) ? 'cu' : 'ready';
   } else if (stepNumber === 4) {
-    wirePos = (target === 'sample_sr' && animating) ? 'sr' : 'flame';
+    wirePos = (target === 'flame' && animating) ? 'flame' : 'cu';
   } else if (stepNumber === 5) {
+    wirePos = (target === 'nichrome_wire' && animating) ? 'ready' : 'flame';
+  } else if (stepNumber === 6) {
+    wirePos = (target === 'sample_sr' && animating) ? 'sr' : 'ready';
+  } else if (stepNumber === 7) {
     wirePos = (target === 'flame' && animating) ? 'flame' : 'sr';
   }
 
   const getWireTransform = () => {
     switch(wirePos) {
-      case 'cu': return 'translate(-117px, 100px) rotate(0deg)';
-      case 'sr': return 'translate(-44px, 100px) rotate(0deg)';
-      case 'flame': return 'translate(100px, -64px) rotate(-30deg)';
+      case 'cu': return 'translate(-184px, 100px) rotate(0deg)';
+      case 'sr': return 'translate(-104px, 100px) rotate(0deg)';
+      case 'flame': return 'translate(24px, -64px) rotate(-30deg)';
+      case 'ready': return 'translate(168px, -20px) rotate(0deg)'; // Perfectly hovers above the stand
       case 'idle': 
-      default: return 'translate(200px, -100px) rotate(45deg)'; 
+      default: return 'translate(168px, 106px) rotate(25deg)'; 
     }
   };
 
   let tipColor = 'border-gray-400 bg-transparent';
-  if ((stepNumber === 2 && wirePos === 'cu') || stepNumber === 3 || (stepNumber === 4 && wirePos === 'flame')) {
+  if (wirePos === 'cu' || (wirePos === 'flame' && stepNumber === 4)) {
     tipColor = 'border-teal-400 bg-teal-400 shadow-[0_0_8px_#2dd4bf]';
-  } else if (isComplete || (stepNumber === 4 && wirePos === 'sr') || stepNumber === 5) {
+  } else if (wirePos === 'sr' || (wirePos === 'flame' && stepNumber === 7)) {
     tipColor = 'border-rose-400 bg-rose-400 shadow-[0_0_8px_#f87171]'; 
   }
 
@@ -57,15 +62,13 @@ const FlameTestBench = ({
 
       <div className="relative z-10 w-full flex flex-col items-center justify-center mt-12">
         
-        <div className="flex justify-center items-end gap-12 h-72 relative w-full max-w-lg mb-20">
+        <div className="flex justify-center items-end gap-16 h-72 relative w-full max-w-3xl mb-20">
           
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-full h-12 bg-black/20 rounded-[100%] blur-md z-0" />
 
-          {/* ── Animated Nichrome Wire ── */}
+          {/* ── Animated Nichrome Wire (Hoverable & Clickable) ── */}
           <div 
-            className={`absolute z-30 transition-all duration-700 ease-in-out flex flex-col items-center pointer-events-none origin-bottom ${
-              wirePos === 'idle' ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
-            }`}
+            className="absolute z-30 transition-all duration-700 ease-in-out flex flex-col items-center origin-bottom opacity-100 scale-100"
             style={{
               left: '50%',
               top: 0,
@@ -74,13 +77,18 @@ const FlameTestBench = ({
               transform: getWireTransform(),
             }}
           >
-            <div className="w-3 h-24 bg-white/40 backdrop-blur-sm border border-white/60 rounded-full shadow-inner" />
-            <div className="w-1 h-12 bg-gradient-to-b from-gray-300 to-gray-500" />
-            <div className={`w-3 h-3 rounded-full border-[3px] transition-colors duration-300 ${tipColor}`} />
+            <div 
+              className="flex flex-col items-center cursor-pointer transition-all duration-300 group hover:-translate-y-2 hover:scale-110 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.7)]"
+              onClick={() => handleElementClick('nichrome_wire')}
+            >
+              <div className="w-3 h-24 bg-white/40 backdrop-blur-sm border border-white/60 rounded-full shadow-inner transition-colors duration-300 group-hover:bg-white/60 group-hover:border-white" />
+              <div className="w-1 h-12 bg-gradient-to-b from-gray-300 to-gray-500 transition-colors duration-300 group-hover:from-gray-200 group-hover:to-gray-400" />
+              <div className={`w-3 h-3 rounded-full border-[3px] transition-colors duration-300 ${tipColor}`} />
+            </div>
           </div>
 
           {/* ── Sample Jars ── */}
-          <div className="flex gap-6 z-10 mb-4">
+          <div className="flex gap-8 z-10 mb-4 w-[128px]">
             
             {/* Cu (II) */}
             <div className="flex flex-col items-center relative z-10 group cursor-pointer" onClick={() => handleElementClick('sample_cu')}>
@@ -109,7 +117,7 @@ const FlameTestBench = ({
           </div>
 
           {/* ── Bunsen Burner ── */}
-          <div className="flex flex-col items-center z-10 ml-8 relative">
+          <div className="flex flex-col items-center z-10 relative w-20">
             
             <div className="relative flex flex-col items-center justify-end">
               <div className={`absolute bottom-[90%] w-24 h-32 bg-slate-900/40 rounded-full blur-xl pointer-events-none transition-all duration-700 ${isBurnerOn ? 'opacity-100' : 'opacity-0'}`} />
@@ -139,6 +147,17 @@ const FlameTestBench = ({
             </div>
 
             <p className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Bunsen Burner</p>
+          </div>
+
+          {/* ── Nichrome Wire Stand ── */}
+          <div 
+            className="flex flex-col items-center z-10 w-20 cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:drop-shadow-[0_0_10px_rgba(255,255,255,0.4)] relative"
+            onClick={() => handleElementClick('nichrome_wire')}
+          >
+            <div className="w-1.5 h-16 bg-gradient-to-b from-gray-300 to-gray-500 rounded-t-sm shadow-inner transition-colors group-hover:from-gray-200 group-hover:to-gray-400"></div>
+            <div className="w-10 h-3 bg-gray-800 rounded-t-lg z-30 shadow-xl border-t border-gray-600 transition-colors group-hover:bg-gray-700"></div>
+            <div className="w-14 h-3 bg-gray-900 rounded-b-lg z-30 shadow-2xl transition-colors group-hover:bg-gray-800"></div>
+            <p className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20 transition-colors duration-300 group-hover:bg-white/20 group-hover:border-white/40">Nichrome Wire</p>
           </div>
 
         </div>

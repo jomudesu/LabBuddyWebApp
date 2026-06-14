@@ -7,7 +7,7 @@ const TitrationBench = ({
   handleElementClick,
   children 
 }) => {
-  const { pH, indicatorColor, buretteFill, beakerFill } = simState;
+  const { pH, indicatorColor, beakerFill } = simState;
   const { addedVolume, showVolumeReading, showDrop, buretteFilled, hasIndicator, animating } = uiState || {};
   
   const target = currentStep?.targetElement;
@@ -18,31 +18,30 @@ const TitrationBench = ({
     return 'linear-gradient(90deg, rgba(173,216,230,0.3) 0%, rgba(255,255,255,0.6) 50%, rgba(173,216,230,0.3) 100%)';
   };
 
-  const displayBuretteFill = buretteFilled ? buretteFill : 0;
+  const maxBuretteVol = 60;
+  const accurateBuretteFill = buretteFilled ? Math.max(10, 90 - (addedVolume / maxBuretteVol) * 80) : 0;
+  
+  // During fill animation, rise to 90% (the 0 mL mark)
+  const buretteFillHeight = (target === 'naoh_bottle' && animating) ? 90 : accurateBuretteFill;
 
   return (
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 flex flex-col justify-center relative overflow-hidden h-full min-h-[500px]">
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
       <div className="relative z-10 w-full flex flex-col items-center justify-center">        
-        <div className="flex justify-center items-end gap-8 md:gap-12 h-[260px] relative w-full max-w-3xl mb-16">
+        <div className="flex justify-center items-end gap-8 md:gap-20 h-[260px] relative w-full max-w-3xl mb-16">
           <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[80%] h-10 bg-black/20 rounded-[100%] blur-md z-0" />
 
           {/* ── NaOH Bottle ── */}
           <div className="flex flex-col items-center relative z-10">
             <div 
               className={`relative w-14 h-24 bg-white/20 backdrop-blur-md border border-white/50 rounded-lg shadow-[inset_0_0_15px_rgba(255,255,255,0.4)] flex flex-col items-center justify-end pb-3 transition-all duration-700 ease-in-out cursor-pointer hover:-translate-y-2 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.6)] hover:border-white/80 ${
-                target === 'naoh_bottle' && animating ? 'translate-x-[110px] -translate-y-[160px] rotate-[60deg] scale-110 z-30' : 'z-10'
+                target === 'naoh_bottle' && animating ? '-rotate-[-50deg] -translate-y-4 scale-110 z-30' : 'z-10'
               }`}
               onClick={() => handleElementClick('naoh_bottle')}
             >
-              {/* Cap */}
               <div className="absolute -top-3 w-6 h-3 bg-blue-600 rounded-t-sm border border-blue-700" />
-              {/* Neck */}
               <div className="absolute top-0 w-8 h-3 bg-white/40 backdrop-blur-sm border-x border-white/40" />
-              {/* Liquid inside */}
               <div className={`absolute bottom-0 w-full rounded-b-lg transition-all duration-[1500ms] ease-in-out bg-blue-100/30 ${buretteFilled && (target !== 'naoh_bottle' || !animating) ? 'h-4' : 'h-[70%]'}`} />
-              
-              {/* Label */}
               <div className="w-12 h-12 bg-white/90 rounded border border-white/50 flex flex-col items-center justify-center shadow-sm z-10">
                 <span className="text-[10px] font-black text-slate-800 leading-tight">NaOH</span>
                 <span className="text-[9px] font-bold text-blue-600">0.1 M</span>
@@ -52,7 +51,7 @@ const TitrationBench = ({
           </div>
 
 
-          {/* ── Burette ── */}
+          {/* ── Burette (Upgraded to 60mL) ── */}
           <div className="flex flex-col items-center relative z-10">
             <div
               className="flex flex-col items-center cursor-pointer transition-all duration-300 ease-out hover:-translate-y-2 hover:scale-105 group"
@@ -64,17 +63,33 @@ const TitrationBench = ({
                   bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7),_0_5px_15px_rgba(0,0,0,0.1)]
                   border border-white/70 transition-all duration-300
                   group-hover:border-white/90 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]
+                  ${target === 'naoh_bottle' && animating ? 'ring-2 ring-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.7)]' : ''}
                   ${showVolumeReading ? 'ring-2 ring-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]' : ''}
                 `}
               >
-                <div className="absolute bottom-0 w-full transition-all duration-700 bg-gradient-to-r from-blue-500 via-blue-300 to-blue-500 opacity-90" style={{ height: `${displayBuretteFill}%` }} />
+                <div className="absolute bottom-0 w-full transition-all duration-[1500ms] ease-in-out bg-gradient-to-r from-blue-500 via-blue-300 to-blue-500 opacity-90" style={{ height: `${buretteFillHeight}%` }} />
                 
-                {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
-                  <div key={pct}>
-                    <div className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${pct}%`, width: pct % 20 === 0 ? '40%' : '20%' }} />
-                    {pct % 20 === 0 && <span className="absolute right-[45%] text-[10px] text-gray-800 font-mono z-10 font-bold" style={{ top: `calc(${pct}% - 7px)` }}>{pct / 2}</span>}
+                {target === 'naoh_bottle' && animating && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-500/20 backdrop-blur-sm rounded-t z-20">
+                    <span className="text-[9px] text-blue-100 font-black tracking-widest uppercase animate-pulse">Filling...</span>
                   </div>
-                ))}
+                )}
+                
+                {[0, 10, 20, 30, 40, 50, 60].map((vol) => {
+                  const topPct = 10 + (vol / 60) * 80;
+                  return (
+                    <div key={`major-${vol}`}>
+                      <div className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${topPct}%`, width: '40%' }} />
+                      <span className="absolute right-[45%] text-[10px] text-gray-800 font-mono z-10 font-bold" style={{ top: `calc(${topPct}% - 7px)` }}>{vol}</span>
+                    </div>
+                  );
+                })}
+                {[5, 15, 25, 35, 45, 55].map((vol) => {
+                  const topPct = 10 + (vol / 60) * 80;
+                  return (
+                    <div key={`minor-${vol}`} className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${topPct}%`, width: '20%' }} />
+                  );
+                })}
 
                 {showVolumeReading && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm rounded-t success-pop z-20">
@@ -111,11 +126,11 @@ const TitrationBench = ({
             <span className="absolute -bottom-16 text-[11px] font-bold text-white/90 px-4 py-1.5 bg-black/40 rounded-full border border-white/10 shadow-md whitespace-nowrap z-20">Beaker</span>
           </div>
 
-          {/* ── ✨ FIX: Indicator bottle (Now animates) ── */}
+          {/* ── Indicator bottle ── */}
           <div className="flex flex-col items-center relative z-10">
             <div 
               className={`relative w-12 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg shadow-lg flex flex-col items-center justify-end pb-1.5 border border-purple-300/50 transition-all duration-700 ease-in-out cursor-pointer opacity-90 hover:opacity-100 hover:-translate-y-3 hover:scale-110 hover:shadow-[0_0_20px_rgba(168,85,247,0.6)] hover:border-purple-300 ${
-                target === 'indicator' && animating ? '-translate-x-[110px] -translate-y-[80px] -rotate-[60deg] scale-110 z-30' : 'z-10'
+                target === 'indicator' && animating ? '-translate-y-[180px] -translate-x-[110px] -rotate-[60deg] scale-110 z-30' : 'z-10'
               }`}
               onClick={() => handleElementClick('indicator')}
             >

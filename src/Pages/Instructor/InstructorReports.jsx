@@ -144,9 +144,9 @@ const InstructorReports = () => {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto w-full flex flex-col h-full animate-fade-in">
       
-      {/* ─── PRINT CSS (A4 LANDSCAPE FOR WIDE TABLES) ─── */}
+      {/* ─── PRINT CSS (Dynamically switches A4 orientation based on active tab) ─── */}
       <style>{`
-        @page { size: A4 landscape; margin: 15mm; }
+        @page { size: A4 ${activeReport === 'gradebook' ? 'landscape' : 'portrait'}; margin: 15mm; }
         @media print {
           body * { visibility: hidden; }
           html, body, #root { position: static !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; background-color: white !important; }
@@ -220,7 +220,7 @@ const InstructorReports = () => {
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input 
                 type="text" 
-                placeholder="Search student..." 
+                placeholder="Search student..."
                 className="pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:border-purple-500 w-36 lg:w-48 transition-all"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -232,7 +232,7 @@ const InstructorReports = () => {
               <select 
                 value={sectionFilter} 
                 onChange={(e) => setSectionFilter(e.target.value)} 
-                className="pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:border-purple-500 appearance-none"
+                className="pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 appearance-none"
               >
                 <option value="All">All Sections</option>
                 {instructorSections.map(s => <option key={s} value={s}>Section: {s}</option>)}
@@ -243,7 +243,7 @@ const InstructorReports = () => {
               <select 
                 value={moduleFilter} 
                 onChange={(e) => setModuleFilter(e.target.value)} 
-                className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 outline-none focus:border-purple-500 max-w-[200px] truncate"
+                className="px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 outline-none focus:border-purple-500 max-w-[200px] truncate"
               >
                 <option value="All">Select a Module...</option>
                 {experiments.map(exp => <option key={exp.id} value={exp.id}>{exp.title}</option>)}
@@ -305,7 +305,7 @@ const InstructorReports = () => {
                         <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase text-center border-l border-slate-200">Status</th>
                         <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase text-center">Score (%)</th>
                         <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase text-center">Errors</th>
-                        <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase text-center bg-purple-50/50">EARIST Grade</th>
+                        <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase text-center bg-purple-50/50">Grade</th>
                       </>
                     )}
                   </tr>
@@ -330,9 +330,12 @@ const InstructorReports = () => {
                             return (
                               <td key={exp.id} className="px-5 py-3 text-sm text-center border-l border-slate-100">
                                 {details?.completed ? (
-                                  <span className={`font-bold ${details.grade >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                    {getEaristGrade(details.grade)}
-                                  </span>
+                                  <div className="flex flex-col items-center leading-tight">
+                                    <span className={`font-bold ${details.grade >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                      {getEaristGrade(details.grade)}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium mt-0.5">({details.grade}%)</span>
+                                  </div>
                                 ) : (
                                   <span className="text-slate-300">-</span>
                                 )}
@@ -418,7 +421,7 @@ const InstructorReports = () => {
                         <th style={{ textAlign: 'center' }}>Status</th>
                         <th style={{ textAlign: 'center' }}>Score (%)</th>
                         <th style={{ textAlign: 'center' }}>Errors</th>
-                        <th style={{ textAlign: 'center', backgroundColor: '#f3e8ff' }}>EARIST Grade</th>
+                        <th style={{ textAlign: 'center', backgroundColor: '#f3e8ff' }}>Grade</th>
                       </>
                     )}
                   </tr>
@@ -436,8 +439,16 @@ const InstructorReports = () => {
                           {experiments.map(exp => {
                             const details = student.completions[exp.id];
                             return (
-                              <td key={exp.id} style={{ textAlign: 'center' }}>
-                                {details?.completed ? getEaristGrade(details.grade) : '-'}
+                              <td key={exp.id} style={{ textAlign: 'center', lineHeight: '1.3' }}>
+                                {details?.completed ? (
+                                  <>
+                                    <span style={{ fontWeight: 'bold', color: details.grade >= 75 ? '#059669' : '#e11d48' }}>
+                                      {getEaristGrade(details.grade)}
+                                    </span>
+                                    <br />
+                                    <span style={{ fontSize: '9px', color: '#64748b' }}>({details.grade}%)</span>
+                                  </>
+                                ) : '-'}
                               </td>
                             );
                           })}
@@ -474,7 +485,7 @@ const InstructorReports = () => {
         })}
 
         <div style={{ marginTop: '40px', fontSize: '11px', color: '#94a3b8', textAlign: 'center', fontFamily: 'sans-serif', borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-          OFFICIAL CLASS RECORD — Generated by Lab Buddy Virtual Chemistry System
+          OFFICIAL CLASS RECORD — Generated by Lab Buddy
         </div>
       </div>
 

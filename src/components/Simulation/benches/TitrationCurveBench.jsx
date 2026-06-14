@@ -34,6 +34,9 @@ const TitrationCurveBench = ({
 
   // Calculate dynamic beaker fill level based on volume added
   const beakerFill = 35 + (volumeAdded / 50) * 30;
+  
+  // Accurate 50mL mathematical scale for the burette liquid
+  const buretteFillHeight = Math.max(10, 90 - (volumeAdded / 50) * 80);
 
   return (
     <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 flex flex-col items-center relative overflow-hidden h-full min-h-[600px]">
@@ -72,11 +75,25 @@ const TitrationCurveBench = ({
               onClick={() => handleElementClick('burette')}
             >
               <div className="flex flex-col items-center transition-all duration-300 group-hover:-translate-y-2 group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                <div className="relative w-8 h-40 bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7)] border border-white/70 overflow-hidden group-hover:border-white">
-                  <div className="absolute bottom-0 w-full transition-all duration-700 bg-white/60 opacity-90" style={{ height: `${100 - (volumeAdded / 50 * 100)}%` }} />
-                  {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((pct) => (
-                    <div key={pct} className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${pct}%`, width: pct % 20 === 0 ? '40%' : '20%' }} />
-                  ))}
+                <div className="relative w-10 h-40 bg-white/30 backdrop-blur-md rounded-t shadow-[inset_0_4px_10px_rgba(255,255,255,0.7)] border border-white/70 transition-all duration-300 group-hover:border-white">
+                  <div className="absolute bottom-0 w-full transition-all duration-700 bg-white/60 opacity-90" style={{ height: `${buretteFillHeight}%` }} />
+                  
+                  {[0, 10, 20, 30, 40, 50].map((vol) => {
+                    const topPct = 10 + (vol / 50) * 80;
+                    return (
+                      <div key={`major-${vol}`}>
+                        <div className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${topPct}%`, width: '40%' }} />
+                        <span className="absolute right-[45%] text-[9px] text-gray-800 font-mono z-10 font-bold" style={{ top: `calc(${topPct}% - 6px)` }}>{vol}</span>
+                      </div>
+                    );
+                  })}
+                  
+                  {[5, 15, 25, 35, 45].map((vol) => {
+                    const topPct = 10 + (vol / 50) * 80;
+                    return (
+                      <div key={`minor-${vol}`} className="absolute right-0 h-px bg-gray-600/70 z-10" style={{ top: `${topPct}%`, width: '20%' }} />
+                    );
+                  })}
                 </div>
                 <div className="w-6 h-3 bg-gradient-to-b from-gray-300 to-gray-500 rounded shadow-md z-10 border border-white/40 group-hover:brightness-125" />
                 <div className="w-1.5 h-6 bg-gradient-to-b from-gray-200 to-white border-x border-gray-400 z-10 group-hover:brightness-125" />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, FlaskConical, LayoutGrid, BookOpen, Activity, CheckCircle2, Minus, X, Users, Send, BarChart2, ArrowDownAZ } from 'lucide-react';
+import { Search, Filter, FlaskConical, LayoutGrid, BookOpen, Activity, CheckCircle2, Minus, X, Users, Send, BarChart2, ArrowDownAZ, ClipboardCheck } from 'lucide-react';
 import { supabase } from '../../backend/Firebase/firebase';
 import { useAuth } from '../../backend/Firebase/AuthContext';
 
@@ -23,9 +23,19 @@ const InstructorExperiments = () => {
   });
   
   const [selectedExpForRoster, setSelectedExpForRoster] = useState(null);
-  const [selectedExpForAssign, setSelectedExpForAssign] = useState(null);
+  
+  // Global Assignment Modal States
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [activeAssignSection, setActiveAssignSection] = useState('');
 
   const instructorSections = useMemo(() => currentUser?.handledSections || [], [currentUser]);
+
+  // Set default active section for the assign modal once sections load
+  useEffect(() => {
+    if (instructorSections.length > 0 && !activeAssignSection) {
+      setActiveAssignSection(instructorSections[0]);
+    }
+  }, [instructorSections, activeAssignSection]);
 
   // ─── FETCH SUPABASE DATA ───
   useEffect(() => {
@@ -121,9 +131,6 @@ const InstructorExperiments = () => {
     try {
       await supabase.from('experiments').update({ assigned_sections: newAssigned }).eq('id', expId);
       setExperiments(prev => prev.map(e => e.id === expId ? { ...e, assigned_sections: newAssigned } : e));
-      if (selectedExpForAssign && selectedExpForAssign.id === expId) {
-        setSelectedExpForAssign({ ...selectedExpForAssign, assigned_sections: newAssigned });
-      }
     } catch (error) {
       console.error("Error updating assignment:", error);
     } finally {
@@ -162,7 +169,7 @@ const InstructorExperiments = () => {
                       <tr key={student.id} className="hover:bg-slate-50/50">
                         <td className="px-4 py-3"><p className="font-bold text-slate-700 text-sm">{student.displayName}</p></td>
                         <td className="px-4 py-3 text-center"><span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">{student.section}</span></td>
-                        <td className="px-4 py-3 text-center"><div className="flex justify-center">{isCompleted ? <div className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded flex items-center text-xs font-bold border border-emerald-100"><CheckCircle2 size={14} className="mr-1.5" /> Done</div> : <div className="bg-slate-50 text-slate-400 px-2.5 py-1 rounded flex items-center text-xs font-bold border border-slate-100"><Minus size={14} className="mr-1.5" /> Pending</div>}</div></td>
+                        <td className="px-4 py-3 text-center"><div className="flex justify-center">{isCompleted ? <div className="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded flex items-center text-xs font-bold border border-emerald-100"><CheckCircle2 size={14} className="mr-1.5" /> Done</div> : <div className="bg-slate-50 text-slate-400 px-2.5 py-1 rounded flex items-center text-xs font-bold border border-slate-100"><Minus size={14} className="mr-1.5" />Not Started</div>}</div></td>
                       </tr> 
                     )
                   }) : (
@@ -180,39 +187,84 @@ const InstructorExperiments = () => {
         </div>
       )}
 
-      {/* ─── MODAL 2: ASSIGNMENT MANAGER ─── */}
-      {selectedExpForAssign && (
+      {/* MODAL 2: BULK ASSIGNMENT MANAGER */}
+      {showAssignModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[85vh]">
+            
+            {/* Header */}
             <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-start shrink-0">
               <div>
-                <h2 className="text-xl font-black text-slate-800 leading-tight pr-4">{selectedExpForAssign.title}</h2>
-                <p className="text-sm font-bold text-blue-600 mt-1 uppercase tracking-wider flex items-center gap-2"><Send size={16}/> Assign to Classes</p>
+                <h2 className="text-xl font-black text-slate-800 leading-tight pr-4">Manage Assignments</h2>
+                <p className="text-sm font-bold text-blue-600 mt-1 uppercase tracking-wider flex items-center gap-2">
+                  <ClipboardCheck size={16}/> Select modules to publish
+                </p>
               </div>
-              <button onClick={() => setSelectedExpForAssign(null)} className="text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-lg p-1.5 shadow-sm transition-colors"><X size={20} /></button>
+              <button onClick={() => setShowAssignModal(false)} className="text-slate-400 hover:text-slate-600 bg-white border border-slate-200 rounded-lg p-1.5 shadow-sm transition-colors"><X size={20} /></button>
             </div>
-            <div className="p-6">
-              <p className="text-sm text-slate-500 mb-4 leading-relaxed text-justify">Toggle the switches below to post this experiment to your handled sections. Students in active sections will immediately see it on their dashboard.</p>
-              <div className="space-y-3">
-                {instructorSections.map(section => {
-                  const isAssigned = (selectedExpForAssign.assigned_sections || []).includes(section);
+
+            {/* Section Tabs */}
+            <div className="px-6 py-4 border-b border-slate-100 bg-white shrink-0 flex items-center gap-3 overflow-x-auto">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2 shrink-0">Target Section:</span>
+              {instructorSections.map(sec => (
+                <button
+                  key={sec}
+                  onClick={() => setActiveAssignSection(sec)}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 ${
+                    activeAssignSection === sec 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 hover:text-blue-600'
+                  }`}
+                >
+                  Section {sec}
+                </button>
+              ))}
+            </div>
+
+            {/* Experiments Checkbox List */}
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-3">
+              {experiments.length === 0 ? (
+                <p className="text-center text-slate-400 py-10">No published experiments available.</p>
+              ) : (
+                experiments.map(exp => {
+                  const isAssigned = (exp.assigned_sections || []).includes(activeAssignSection);
                   return (
-                    <div key={section} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isAssigned ? 'bg-blue-50/50 border-blue-200' : 'bg-slate-50 border-slate-200'}`}>
-                      <span className={`font-bold ${isAssigned ? 'text-blue-700' : 'text-slate-600'}`}>Section: {section}</span>
-                      <button 
-                        disabled={updating}
-                        onClick={() => handleToggleAssignment(selectedExpForAssign.id, section, selectedExpForAssign.assigned_sections)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isAssigned ? 'bg-blue-600' : 'bg-slate-300'}`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAssigned ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
+                    <label 
+                      key={exp.id} 
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer shadow-sm hover:shadow-md ${
+                        isAssigned 
+                        ? 'bg-blue-50/50 border-blue-200' 
+                        : 'bg-white border-slate-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isAssigned ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                          <FlaskConical size={20} />
+                        </div>
+                        <div>
+                           <h4 className={`font-bold leading-tight ${isAssigned ? 'text-blue-800' : 'text-slate-700'}`}>{exp.title}</h4>
+                           <p className="text-xs text-slate-500 mt-1 font-medium">{exp.category} • <span className="uppercase">{exp.difficulty}</span></p>
+                        </div>
+                      </div>
+                      
+                      <div className="relative flex items-center justify-center ml-4 shrink-0">
+                         <input
+                           type="checkbox"
+                           checked={isAssigned}
+                           disabled={updating}
+                           onChange={() => handleToggleAssignment(exp.id, activeAssignSection, exp.assigned_sections)}
+                           className="peer appearance-none w-6 h-6 border-2 border-slate-300 rounded bg-white checked:bg-blue-600 checked:border-blue-600 transition-all cursor-pointer disabled:opacity-50"
+                         />
+                         <CheckCircle2 size={16} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" strokeWidth={3} />
+                      </div>
+                    </label>
                   );
-                })}
-              </div>
+                })
+              )}
             </div>
-            <div className="p-4 border-t border-slate-100 bg-slate-50">
-              <button onClick={() => setSelectedExpForAssign(null)} className="w-full py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all shadow-md">Done</button>
+
+            <div className="p-4 border-t border-slate-100 bg-white shrink-0">
+              <button onClick={() => setShowAssignModal(false)} className="w-full py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-700 transition-all shadow-md">Done</button>
             </div>
           </div>
         </div>
@@ -232,8 +284,8 @@ const InstructorExperiments = () => {
         </div>
       </div>
 
-      {/* ─── SEARCH & FILTER TOGGLE ROW ─── */}
-      <div className="flex flex-col md:flex-row gap-4 mb-4 z-20 relative">
+      {/* ─── SEARCH, FILTER & MANAGE ROW ─── */}
+      <div className="flex flex-col md:flex-row gap-3 mb-4 z-20 relative">
         <div className="relative flex-1 group">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-purple-500 transition-colors" size={20} />
           <input 
@@ -245,22 +297,32 @@ const InstructorExperiments = () => {
           />
         </div>
         
-        <button 
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center justify-center px-6 py-3.5 rounded-xl font-bold transition-all duration-300 shadow-sm border ${
-            showFilters || activeFilterCount > 0 
-            ? 'bg-purple-600 text-white border-purple-600 shadow-purple-200 hover:bg-purple-700' 
-            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-          }`}
-        >
-          <Filter size={20} className="mr-2" /> 
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-3 bg-white text-purple-600 px-2 py-0.5 rounded-full text-xs font-black">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+        <div className="flex gap-3 shrink-0">
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center justify-center px-6 py-3.5 rounded-xl font-bold transition-all duration-300 shadow-sm border ${
+              showFilters || activeFilterCount > 0 
+              ? 'bg-purple-600 text-white border-purple-600 shadow-purple-200 hover:bg-purple-700' 
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+            }`}
+          >
+            <Filter size={20} className="mr-2" /> 
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-3 bg-white text-purple-600 px-2 py-0.5 rounded-full text-xs font-black">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          {/* Global Assign Button */}
+          <button 
+            onClick={() => setShowAssignModal(true)} 
+            className="flex items-center justify-center px-6 py-3.5 rounded-xl font-bold transition-all duration-300 shadow-sm border bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:shadow-md"
+          >
+            <Send size={20} className="mr-2 md:hidden lg:block" /> Post their Assignments
+          </button>
+        </div>
       </div>
 
       {/* ─── EXPANDABLE FILTERS PANEL ─── */}
@@ -377,11 +439,9 @@ const InstructorExperiments = () => {
                     </div>
                     
                     <div className="flex items-center gap-2 pt-2">
-                      <button onClick={() => setSelectedExpForAssign(exp)} className={`flex-1 flex items-center justify-center text-xs font-bold px-3 py-2.5 rounded-lg border transition-all ${isAssignedToAny ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                        <Send size={14} className="mr-1.5" /> Assign Module
-                      </button>
-                      <button onClick={() => setSelectedExpForRoster(exp)} className="flex-1 flex items-center justify-center text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2.5 rounded-lg shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
-                        <Users size={14} className="mr-1.5" /> View Roster
+                      {/* Replaced Assign Button with full-width View Roster */}
+                      <button onClick={() => setSelectedExpForRoster(exp)} className="w-full flex items-center justify-center text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 px-3 py-2.5 rounded-lg shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+                        <Users size={14} className="mr-1.5" /> View Class Rosters
                       </button>
                     </div>
                   </div>

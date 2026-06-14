@@ -204,7 +204,7 @@ const InstructorAnalytics = () => {
                       {details?.completed ? (
                         <div className="flex items-center gap-6">
                           <div className="text-center">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Misclicks</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Mistakes</p>
                             <p className="text-sm font-bold text-amber-500">{details.errors}</p>
                           </div>
                           <div className="text-center">
@@ -221,7 +221,7 @@ const InstructorAnalytics = () => {
                       ) : (
                         <div className="flex items-center px-4 py-2 bg-slate-50 border border-slate-100 rounded-lg">
                           <Minus size={14} className="text-slate-400 mr-1.5" />
-                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pending</span>
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Not Started</span>
                         </div>
                       )}
                     </div>
@@ -263,7 +263,7 @@ const InstructorAnalytics = () => {
                    <p className="text-xs font-bold text-slate-400 mt-1">({selectedRecord.details.grade}%)</p>
                  </div>
                  <div className="text-center w-1/2">
-                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Misclicks</p>
+                   <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1">Total Mistakes</p>
                    <p className="text-3xl font-black text-amber-500">{selectedRecord.details.errors}</p>
                    <p className="text-xs font-bold text-slate-400 mt-1">Errors Made</p>
                  </div>
@@ -332,7 +332,7 @@ const InstructorAnalytics = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 z-20"><div className="relative flex-1 group"><Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search students..." className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500" /></div><div className="relative shrink-0 min-w-[200px]"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><LayoutGrid className="text-slate-400" size={18} /></div><select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)} className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl appearance-none"><option value="All">All My Sections</option>{instructorSections.map(s => <option key={s} value={s}>Section: {s}</option>)}</select></div></div>
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 z-20"><div className="relative flex-1 group"><Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search students..." className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500" /></div><div className="relative shrink-0 min-w-[200px]"><div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><LayoutGrid className="font-normal" size={18} /></div><select value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)} className="w-full pl-11 pr-10 py-3 bg-white border border-slate-200 rounded-xl appearance-none"><option value="All">All My Sections</option>{instructorSections.map(s => <option key={s} value={s}>Section: {s}</option>)}</select></div></div>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 relative">
         {loading && <div className="absolute inset-0 z-50 bg-white/80 flex items-center justify-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div></div>}
@@ -402,7 +402,7 @@ const InstructorAnalytics = () => {
                         ) : (
                           <div className="flex items-center justify-center px-3 py-1.5 bg-slate-50 text-slate-400 rounded-lg border border-slate-200" title="Not Started">
                             <Minus size={16} strokeWidth={2.5} className="mr-1.5" />
-                            <span className="text-[11px] font-bold uppercase tracking-wider">Pending</span>
+                            <span className="text-[11px] font-bold uppercase tracking-wider">Not Started</span>
                           </div>
                         )}
                       </div>
