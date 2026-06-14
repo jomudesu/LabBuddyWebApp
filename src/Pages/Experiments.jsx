@@ -31,20 +31,21 @@ const Experiments = () => {
     }
   }, [location, navigate]);
 
-  // Filter the master experiment list down to ONLY modules assigned to this student's section
+  // Guests see all published experiments!
   const assignedExperiments = useMemo(() => {
-    if (!experiments || !currentUser?.section) return [];
+    if (!experiments) return [];
+    if (currentUser?.role === 'guest') return experiments; // Bypass assignment lock
+    
+    if (!currentUser?.section) return [];
     return experiments.filter(exp => {
       const assignedTo = exp.assigned_sections || [];
       return assignedTo.includes(currentUser.section);
     });
   }, [experiments, currentUser]);
 
-  // Ensure the category dropdown only shows subjects they actually have access to
   const categories = useMemo(() => ['All', ...new Set(assignedExperiments.map(e => e.category).filter(Boolean))], [assignedExperiments]);
   const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 
-  // Apply Search & Filters to the already-restricted assigned experiments list
   const processedExperiments = useMemo(() => {
     let result = assignedExperiments.filter(exp => {
       const matchesSearch = exp.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -84,21 +85,17 @@ const Experiments = () => {
     setSearchQuery('');
   };
 
-  // Centralized Navigation & Cache Wiping Logic
   const handleStart = async (exp) => {
     const status = getStatus(exp.id);
     
-    // 1. If starting fresh OR reviewing, wipe the browser's session storage completely
     if (status === 'not_started' || status === 'completed') {
       sessionStorage.removeItem(`lab_buddy_sim_${exp.id}`);
     }
 
-    // 2. Only update the database to 'in_progress' if it's a brand new attempt
     if (status === 'not_started') {
       await updateExperimentStatus(exp.id, 'in_progress');
     }
     
-    // 3. Launch the lab!
     navigate(`/experiment/${exp.id}`);
   };
 
@@ -138,7 +135,11 @@ const Experiments = () => {
           <div>
             <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Laboratory Hub</h1>
             <p className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-2">
-              Viewing modules assigned to <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Section {currentUser?.section || 'None'}</span>
+              {currentUser?.role === 'guest' ? (
+                <span className="text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shadow-sm">Guest Access Mode</span>
+              ) : (
+                <>Viewing modules assigned to <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Section {currentUser?.section || 'None'}</span></>
+              )}
             </p>
           </div>
         </div>
@@ -223,7 +224,6 @@ const Experiments = () => {
           </div>
         </div>
 
-        {/* Dynamic Empty States based on Assignment Status */}
         {assignedExperiments.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm animate-fade-in-up">
             <Lock className="mx-auto text-slate-300 mb-4" size={48} />

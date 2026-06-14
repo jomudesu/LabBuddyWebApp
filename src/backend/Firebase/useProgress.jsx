@@ -12,6 +12,12 @@ export const ProgressProvider = ({ children }) => {
   const fetchProgress = async () => {
     if (!currentUser) return;
     
+    // Guests don't fetch from the DB
+    if (currentUser.role === 'guest') {
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('user_progress')
       .select('*')
@@ -44,6 +50,9 @@ export const ProgressProvider = ({ children }) => {
 
     fetchProgress();
 
+    // Guests don't subscribe to database changes
+    if (currentUser.role === 'guest') return;
+
     const channel = supabase.channel('user_progress_changes')
       .on(
         'postgres_changes', 
@@ -60,13 +69,6 @@ export const ProgressProvider = ({ children }) => {
     const now = new Date().toISOString();
 
     try {
-      const { data: existing } = await supabase
-        .from('user_progress')
-        .select('id')
-        .eq('user_id', currentUser.uid)
-        .eq('experiment_id', experimentId)
-        .single();
-
       const isPayload = typeof statusOrPayload === 'object';
       const status = isPayload ? statusOrPayload.status : statusOrPayload;
       
@@ -75,7 +77,7 @@ export const ProgressProvider = ({ children }) => {
       if (isPayload && statusOrPayload.grade !== undefined) updateData.grade = statusOrPayload.grade;
       if (isPayload && statusOrPayload.errors !== undefined) updateData.errors = statusOrPayload.errors;
 
-      // This tells React to update the Hub immediately without waiting for Supabase to confirm
+      // 1. Update local React state instantly (so UI responds)
       setProgress(prev => ({
         ...prev,
         [experimentId]: {
@@ -86,6 +88,17 @@ export const ProgressProvider = ({ children }) => {
           completedAt: updateData.completed_at || prev[experimentId]?.completedAt
         }
       }));
+
+      // Guests do NOT write to the database!
+      if (currentUser.role === 'guest') return;
+
+      // 2. Safely sync to Supabase for real accounts
+      const { data: existing } = await supabase
+        .from('user_progress')
+        .select('id')
+        .eq('user_id', currentUser.uid)
+        .eq('experiment_id', experimentId)
+        .single();
 
       if (existing) {
         await supabase.from('user_progress').update(updateData).eq('id', existing.id);

@@ -4,14 +4,15 @@ import {
   Beaker, FlaskRound as Flask, Atom, Shield, ChevronRight, 
   ChevronDown, ChevronUp, BookOpen, AlertCircle, Sparkles,
   Microscope, TestTube, Brain, Wrench, ArrowLeft, ShieldCheck, Check,
-  CheckCircle, ShieldAlert, KeyRound, Mail, Eye, EyeOff
+  CheckCircle, ShieldAlert, KeyRound, Mail, Eye, EyeOff, User
 } from 'lucide-react';
 import { useAuth } from '../backend/Firebase/AuthContext';
 import { supabase } from '../backend/Firebase/firebase';
 import emailjs from '@emailjs/browser';
 
 const Landing = () => {
-  const { login, resetPassword, error: authError, platformSettings, logout } = useAuth(); 
+
+  const { login, loginAsGuest, resetPassword, error: authError, platformSettings, logout } = useAuth(); 
   
   const [isForgotPassword, setIsForgotPassword] = useState(false); 
   const [email, setEmail] = useState('');
@@ -102,11 +103,16 @@ const Landing = () => {
     }
   };
 
-const routeUser = (role) => {
-    // Allow both admin roles into the dashboard
+  const routeUser = (role) => {
     if (role === 'admin' || role === 'super_admin') navigate('/admin/dashboard');
     else if (role === 'instructor') navigate('/instructor/dashboard');
     else navigate('/dashboard');
+  };
+
+  // Guest Flow Trigger
+  const handleGuestAccess = () => {
+    loginAsGuest();
+    routeUser('guest'); // Routes to standard student dashboard
   };
 
   // ─── LOGIN & OTP LOGIC ───
@@ -134,7 +140,6 @@ const routeUser = (role) => {
           otp_code: code
         }, EMAILJS_PUBLIC_KEY);
 
-        // Exclude both admins from DPA check
         if (!userData.has_accepted_dpa && !['admin', 'super_admin'].includes(userData.role)) {
           setPendingUser(userData);
         }
@@ -142,7 +147,6 @@ const routeUser = (role) => {
         setShowOTP(true);
         setSuccessMessage(`Unrecognized device detected. A security code has been sent to ${email}. Check your spams too!`);
       } else {
-        // Exclude both admins from DPA check
         if (!userData.has_accepted_dpa && !['admin', 'super_admin'].includes(userData.role)) {
           setPendingUser(userData);
           setShowDPAModal(true);
@@ -153,7 +157,6 @@ const routeUser = (role) => {
 
     } catch (err) {
       const errorMsg = err?.message || err?.text || String(err);
-      
       if (typeof errorMsg === 'string' && errorMsg.includes("FIRST_LOGIN_RESET:")) {
         setSuccessMessage(errorMsg.replace("FIRST_LOGIN_RESET:", "").trim());
       } else if (typeof errorMsg === 'string' && errorMsg.includes("SECURITY_LOCK:")) {
@@ -166,7 +169,6 @@ const routeUser = (role) => {
     }
   };
 
-  // Verify the OTP input
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setLocalError('');
@@ -353,7 +355,6 @@ const routeUser = (role) => {
               </div>
             )}
 
-
             {/* ─── VIEW 1: OTP MFA SCREEN ─── */}
             {showOTP ? (
               <div className="animate-fade-in flex flex-col shrink-0">
@@ -441,12 +442,24 @@ const routeUser = (role) => {
                     {loading ? 'Authenticating...' : 'Secure Login'}
                   </button>
                 </form>
-                <div className="mt-8 pt-8 border-t border-slate-100 text-center">
-                  <p className="text-xs text-slate-400 font-medium">
-                    Need an account? <br/>
-                    <span className="text-slate-600 font-bold mt-1 block">Please contact your System Administrator to request platform access.</span>
+                
+                {/* Guest Login and Information Layout */}
+                <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col items-center">
+                  <p className="text-sm text-slate-500 font-medium mb-3">Just looking around?</p>
+                  <button 
+                    type="button" 
+                    onClick={handleGuestAccess} 
+                    className="w-full py-3 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 hover:text-slate-800 hover:border-slate-300 transition-all shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Sparkles size={18} className="text-amber-500" /> Try as Guest
+                  </button>
+
+                  <p className="text-[10px] text-slate-400 font-medium mt-6 text-center">
+                    Need an institutional account? <br/>
+                    <span className="text-slate-500 font-bold mt-0.5 block">Contact your System Administrator.</span>
                   </p>
                 </div>
+
               </div>
             )}
           </div>

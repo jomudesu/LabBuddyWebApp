@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Lock, Activity } from 'lucide-react';
+import { ArrowLeft, Loader2, Lock, Activity, Sparkles } from 'lucide-react';
+import { useAuth } from '../backend/Firebase/AuthContext';
 import { useExperiments } from '../backend/Firebase/useExperiments';
 import { useProgress } from '../backend/Firebase/useProgress';
 import { simulationConfigs } from '../config/simulation';
@@ -9,12 +10,14 @@ import ClickAndPlaySimulationContent from '../components/Simulation/ClickAndPlay
 const ExperimentPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { experiments, loading } = useExperiments();
   const { getStatus, updateExperimentStatus } = useProgress();
   const [experiment, setExperiment] = useState(null);
   const [simConfig, setSimConfig] = useState(null);
 
   const isReviewMode = getStatus(id) === 'completed';
+  const isGuest = currentUser?.role === 'guest';
 
   useEffect(() => {
     if (!loading && experiments.length) {
@@ -49,11 +52,14 @@ const ExperimentPage = () => {
       return;
     }
 
-    // First-time completion now sends a distinct success notice back to the Hub page
     await updateExperimentStatus(id, gradingPayload || 'completed');
-    navigate('/experiments', { 
-      state: { successMsg: `Experiment completed! Your official grade of ${gradingPayload?.grade || 100}% has been recorded.` } 
-    });
+
+    // Provide a different message for Guests vs Logged In students
+    const successMsg = isGuest 
+      ? `Experiment completed! You scored ${gradingPayload?.grade || 100}%. (Guest Session: Your grade was not permanently saved to the database).`
+      : `Experiment completed! Your official grade of ${gradingPayload?.grade || 100}% has been recorded.`;
+
+    navigate('/experiments', { state: { successMsg } });
   };
 
   return (
@@ -65,8 +71,13 @@ const ExperimentPage = () => {
         </button>
         <h1 className="text-xl font-semibold text-white tracking-wide">{experiment.title}</h1>
         
-        {/* Explicit Status Banners so students know if they are being graded! */}
-        {isReviewMode ? (
+        {/* Guest Status Banner overrides standard grading banners */}
+        {isGuest ? (
+          <div className="hidden sm:flex bg-amber-500/20 border border-amber-500/40 text-amber-300 px-4 py-1.5 rounded-lg items-center gap-2 shadow-inner ml-4">
+            <Sparkles size={14} />
+            <span className="text-[11px] font-black uppercase tracking-wider">Guest Mode: Free Exploration</span>
+          </div>
+        ) : isReviewMode ? (
           <div className="hidden sm:flex bg-amber-500/20 border border-amber-500/40 text-amber-300 px-4 py-1.5 rounded-lg items-center gap-2 shadow-inner ml-4">
             <Lock size={14} />
             <span className="text-[11px] font-black uppercase tracking-wider">Review Mode: Grade Locked</span>

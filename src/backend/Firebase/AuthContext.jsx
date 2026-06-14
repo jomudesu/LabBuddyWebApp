@@ -105,11 +105,41 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Guest Login Spoofer
+  const loginAsGuest = () => {
+    setError(null);
+    setCurrentUser({
+      id: `guest_${Math.random().toString(36).substr(2, 9)}`,
+      uid: `guest_${Math.random().toString(36).substr(2, 9)}`,
+      role: 'guest',
+      display_name: 'Guest Explorer',
+      section: 'Public',
+      has_accepted_dpa: true // Bypass DPA modal
+    });
+  };
+
   const resetPassword = async (email) => { try { setError(null); await sendPasswordResetEmail(auth, email); } catch (err) { setError(err.message); throw err; } };
-  const logout = async () => { try { await signOut(auth); } catch (err) { setError(err.message); throw err; } };
+  
+  const logout = async () => { 
+    try { 
+      if (currentUser?.role === 'guest') {
+        setCurrentUser(null); // Just clear the local spoofed state
+      } else {
+        await signOut(auth); 
+      }
+    } catch (err) { 
+      setError(err.message); throw err; 
+    } 
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // If we are currently spoofing a guest, ignore the auth state change
+      if (currentUser?.role === 'guest') {
+        setLoading(false);
+        return;
+      }
+
       if (firebaseUser) {
         try {
           const [userRes, prefsRes] = await Promise.all([
@@ -145,8 +175,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
     return unsubscribe;
-  }, []);
+  }, [currentUser]); // Added dependency to monitor guest state
 
-  const value = { currentUser, platformSettings, loading, error, login, resetPassword, logout };
+  // Export the new loginAsGuest function
+  const value = { currentUser, platformSettings, loading, error, login, loginAsGuest, resetPassword, logout };
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };
