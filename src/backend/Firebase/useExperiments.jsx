@@ -31,7 +31,19 @@ export const useExperiments = () => {
       }
     };
     
+    // 1. Initial fetch when the component loads
     fetchExperiments();
+
+    // 2. Listen for any changes to the 'experiments' table
+    const channel = supabase.channel('global_experiments_sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'experiments' }, () => {
+        // Whenever an instructor toggles an assignment, this triggers and silently refetches the updated list!
+        fetchExperiments(); 
+      })
+      .subscribe();
+
+    // 3. Cleanup the listener when the user leaves the page
+    return () => supabase.removeChannel(channel);
   }, []);
 
   return { experiments, loading, error };

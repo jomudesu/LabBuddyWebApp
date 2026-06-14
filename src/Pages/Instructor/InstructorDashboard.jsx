@@ -7,7 +7,7 @@ import { useAuth } from '../../backend/Firebase/AuthContext';
 const InstructorDashboard = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ totalStudents: 0, activeExperiments: 0, totalCompletions: 0 });
+  const [stats, setStats] = useState({ totalStudents: 0, assignedExperiments: 0, totalCompletions: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,11 +21,7 @@ const InstructorDashboard = () => {
           return;
         }
 
-        const { count: activeExperimentsCount } = await supabase
-          .from('experiments')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'published');
-
+        // 1. Fetch Students
         const { data: myStudents } = await supabase
           .from('users')
           .select('id')
@@ -33,8 +29,19 @@ const InstructorDashboard = () => {
           .eq('status', 'active')
           .in('section', instructorSections);
 
-        let totalCompletionsCount = 0;
+        // 2. Fetch Experiments assigned to these sections
+        const { data: allExperiments } = await supabase
+          .from('experiments')
+          .select('id, assigned_sections')
+          .eq('status', 'published');
 
+        // Filter experiments where the assigned_sections array overlaps with the instructor's handledSections
+        const assignedExperimentsCount = (allExperiments || []).filter(exp => 
+          (exp.assigned_sections || []).some(sec => instructorSections.includes(sec))
+        ).length;
+
+        // 3. Fetch Completions
+        let totalCompletionsCount = 0;
         if (myStudents && myStudents.length > 0) {
           const studentIds = myStudents.map(s => s.id);
           const { count } = await supabase
@@ -48,7 +55,7 @@ const InstructorDashboard = () => {
 
         setStats({
           totalStudents: myStudents?.length || 0,
-          activeExperiments: activeExperimentsCount || 0,
+          assignedExperiments: assignedExperimentsCount,
           totalCompletions: totalCompletionsCount 
         });
       } catch (error) {
@@ -103,7 +110,7 @@ const InstructorDashboard = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <StatCard title="My Students" value={stats.totalStudents} icon={Users} color="blue" />
-          <StatCard title="Active Modules" value={stats.activeExperiments} icon={FlaskConical} color="purple" />
+          <StatCard title="Modules Posted" value={stats.assignedExperiments} icon={FlaskConical} color="purple" />
           <StatCard title="Total Completions" value={stats.totalCompletions} icon={CheckCircle} color="emerald" />
         </div>
       )}
@@ -131,8 +138,8 @@ const InstructorDashboard = () => {
           </button>
           <button onClick={() => navigate('/instructor/experiments')} className="p-5 bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md rounded-2xl text-left transition-all group">
             <div className="bg-blue-100 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 mb-3 group-hover:scale-110 transition-transform"><FlaskConical size={20} /></div>
-            <h3 className="font-bold text-slate-800 mb-1 flex items-center justify-between">Review Experiments <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-600 transition-colors" /></h3>
-            <p className="text-xs text-slate-500 font-medium">Check available lab modules for your classes.</p>
+            <h3 className="font-bold text-slate-800 mb-1 flex items-center justify-between">Post Experiments <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-600 transition-colors" /></h3>
+            <p className="text-xs text-slate-500 font-medium">Assign lab modules to your classes.</p>
           </button>
         </div>
       </div>

@@ -27,7 +27,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Check both admin roles
     if (platformSettings?.maintenanceMode && currentUser && !['admin', 'super_admin'].includes(currentUser.role)) {
       signOut(auth).then(() => setCurrentUser(null));
     }
@@ -73,7 +72,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('lab_buddy_device_id', localDeviceId);
       }
 
-      // Exclude both admins from Device Locking
       if (!['admin', 'super_admin'].includes(userData.role) && !currentKnownDevices.includes(localDeviceId)) {
         if (currentKnownDevices.length >= 2) {
           await signOut(auth);
@@ -88,7 +86,6 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // Exclude both admins from Maintenance block
       if (freshPrefs?.maintenance_mode && !['admin', 'super_admin'].includes(userData.role)) {
         await signOut(auth); 
         throw new Error("System is currently undergoing maintenance. Please try again later.");
@@ -132,7 +129,13 @@ export const AuthProvider = ({ children }) => {
             } else if (customUserData.status === 'pending' || customUserData.status === 'disabled') {
               await signOut(auth); setCurrentUser(null);
             } else {
-              setCurrentUser({ ...firebaseUser, ...customUserData, displayName: customUserData.display_name, hasAcceptedDPA: customUserData.has_accepted_dpa });
+              setCurrentUser({ 
+                ...firebaseUser, 
+                ...customUserData, 
+                displayName: customUserData.display_name, 
+                hasAcceptedDPA: customUserData.has_accepted_dpa,
+                handledSections: customUserData.handled_sections || [] 
+              });
             }
           } else {
             await signOut(auth); setCurrentUser(null);
