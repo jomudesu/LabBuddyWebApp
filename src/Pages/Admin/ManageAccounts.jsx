@@ -83,7 +83,7 @@ const ManageAccounts = () => {
         role: formData.role,
         section: formData.role === 'student' ? formData.section : null,
         handled_sections: formData.role === 'instructor' ? formData.handledSections : null,
-        account_status: 'active'
+        status: 'active'
       }]);
 
       if (dbError) throw dbError;
@@ -107,7 +107,7 @@ const ManageAccounts = () => {
         role: formData.role,
         section: formData.role === 'student' ? formData.section : null,
         handled_sections: formData.role === 'instructor' ? formData.handledSections : null,
-        account_status: formData.status
+        status: formData.status
       }).eq('id', editingUser.id);
 
       if (error) throw error;
@@ -153,7 +153,7 @@ const ManageAccounts = () => {
   
   const openEditModal = (user) => { 
     setEditingUser(user); 
-    setFormData({ email: user.email, displayName: user.display_name, role: user.role, section: user.section || '', handledSections: user.handled_sections || [], status: user.account_status || 'active' }); 
+    setFormData({ email: user.email, displayName: user.display_name, role: user.role, section: user.section || '', handledSections: user.handled_sections || [], status: user.status || 'active' }); 
     setSectionInput('');
     setIsEditModalOpen(true); 
   };
@@ -172,7 +172,7 @@ const ManageAccounts = () => {
     let result = users.filter(user => {
       const matchesSearch = (user.display_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (user.email || '').toLowerCase().includes(searchQuery.toLowerCase());
       const matchesRole = filters.role === 'All' || user.role === filters.role;
-      const matchesStatus = filters.status === 'All' || (user.account_status || 'active') === filters.status;
+      const matchesStatus = filters.status === 'All' || (user.status || 'active') === filters.status;
       
       let matchesSection = filters.section === 'All';
       if (filters.section !== 'All') {
@@ -515,7 +515,7 @@ const ManageAccounts = () => {
                       </div>
                     ) : <span className="text-slate-500 text-sm">-</span>}
                   </td>
-                  <td className="px-6 py-4">{getStatusBadge(user.account_status)}</td>
+                  <td className="px-6 py-4">{getStatusBadge(user.status)}</td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-400">
                     <div className="flex items-center"><CalendarDays size={14} className="mr-1.5 opacity-70"/> {new Date(user.created_at).toLocaleDateString()}</div>
                   </td>

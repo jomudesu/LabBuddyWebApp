@@ -43,7 +43,8 @@ const InstructorReports = () => {
   const [sectionFilter, setSectionFilter] = useState('All');
   const [moduleFilter, setModuleFilter] = useState('All');
 
-  const instructorSections = useMemo(() => currentUser?.handledSections || [], [currentUser]);
+  const sectionsString = JSON.stringify(currentUser?.handledSections || []);
+  const instructorSections = useMemo(() => JSON.parse(sectionsString), [sectionsString]);
 
   // Reset module filter when switching tabs
   useEffect(() => {
@@ -86,7 +87,7 @@ const InstructorReports = () => {
     };
 
     fetchData();
-  }, [instructorSections]);
+  }, [instructorSections]); // <--- Now fully stable and will not loop!
 
   // ─── BUILD GRADEBOOK ───
   const gradebook = useMemo(() => {

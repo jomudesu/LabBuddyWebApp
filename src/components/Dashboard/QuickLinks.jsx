@@ -28,8 +28,12 @@ const QuickLinks = () => {
   const { currentUser } = useAuth();
   const { experiments, loading } = useExperiments();
 
+  // Guest users bypass the section check and see all published experiments!
   const assignedExperiments = useMemo(() => {
-    if (!experiments || !currentUser?.section) return [];
+    if (!experiments) return [];
+    if (currentUser?.role === 'guest') return experiments; 
+    if (!currentUser?.section) return [];
+    
     return experiments.filter(exp => {
       const assignedTo = exp.assigned_sections || [];
       return assignedTo.includes(currentUser.section);
@@ -39,15 +43,18 @@ const QuickLinks = () => {
   const [infoMessage, setInfoMessage] = useState('');
 
   useEffect(() => {
-    if (activeModal === 'beginExperiment' && assignedExperiments.length > 0 && !loading) {
+    if (activeModal === 'beginExperiment' && assignedExperiments.length > 0 && randomExperiments.length === 0) {
       const shuffled = [...assignedExperiments];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
       setRandomExperiments(shuffled.slice(0, 3));
+    } else if (activeModal !== 'beginExperiment' && randomExperiments.length > 0) {
+      // Clear the recommendations when modal closes so it reshuffles next time
+      setRandomExperiments([]); 
     }
-  }, [activeModal, assignedExperiments, loading]);
+  }, [activeModal, assignedExperiments, randomExperiments.length]);
 
   const getDifficultyStyles = (difficulty) => {
     switch(difficulty?.toLowerCase()) {
